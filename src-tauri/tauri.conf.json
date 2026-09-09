@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicegram/nicegram4j/main/src/schema.json",
+  "identifier": "com.ayis.tauri",
+  "version": "1.0.0",
+  "publisher": "AYIS",
+  "name": "Agricultural Yield Intelligence System",
+  "description": "Farm management, crop intelligence, weather, and yield analytics desktop app.",
+  "license": "MIT",
+  "version_editable": false,
+  "icon": [
+    "icons/32x32.png",
+    "icons/128x128.png",
+    "icons/128x128@2x.png",
+    "icons/icon.icns",
+    "icons/icon.ico"
+  ],
+  "windows": {
+    "with_global_shortcut": false,
+    "wix": null,
+    "nsis": null
+  },
+  "security": {
+    "csp": null
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "identifier": "com.ayis.tauri",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "category": " Productivity",
+    "short_description": "AYIS desktop app",
+    "long_description": "Agricultural Yield Intelligence System — Farm management, crop intelligence, weather, and yield analytics.",
+    "developer": {
+      "name": "AYIS",
+      "website": "https://github.com/Aomine-c2c/ayi"
+    },
+    "copyright": "Copyright 2026 AYIS",
+    "files": [],
+    "windows": {
+      "certificate": null,
+      "digest": null,
+      "timestamp": null
+    }
+  },
+  "plugins": {}
+}
