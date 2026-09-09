@@ -79,3 +79,4 @@ cargo tauri dev      # Tauri dev with WebView loading the built app
 ## Development levels
 
 See `ARCHITECTURE_PLAN.md` for the full roadmap. Current target: **Level 0 — Foundation**.
+# ayi
