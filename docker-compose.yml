@@ -1,0 +1,83 @@
+services:
+  db:
+    image: postgis/postgis:17-3.4-alpine
+    container_name: ayis-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ayis
+      POSTGRES_USER: ayis
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ayis-dev-password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ayis-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ayis -d ayis"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ayis-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ayis-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://ayis:${DB_PASSWORD:-ayis-dev-password}@db:5432/ayis
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      DEBUG: "true"
+      ALLOWED_HOSTS: "*"
+      CORS_ORIGIN_WHITELIST: "http://localhost:3000,http://localhost:1420,tauri://localhost"
+      DB_HOST: db
+      DB_NAME: ayis
+      DB_USER: ayis
+      DB_PASSWORD: ${DB_PASSWORD:-ayis-dev-password}
+      DB_PORT: "5432"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./backend/static:/app/staticfiles
+      - ./backend/media:/app/mediafiles
+
+  backend-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ayis-worker
+    restart: unless-stopped
+    command: celery -A ayis worker -l info
+    environment:
+      DATABASE_URL: postgres://ayis:${DB_PASSWORD:-ayis-dev-password}@db:5432/ayis
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      DEBUG: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+volumes:
+  ayis-db-data:

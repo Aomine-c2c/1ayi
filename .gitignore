@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+*.manifest
+*.spec
+*.egg
+
+# Virtual environments
+.venv/
+ayi-venv/
+venv/
+ENV/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+staticfiles/
+mediafiles/
+
+# Environment files — NEVER commit real secrets
+.env
+.env.local
+.env.production
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.vercel/
+
+# Docker volumes (don't commit container data)
+docker-compose.override.yml
+
+# Test / scratch files
+/tmp/
+*.tmp
+*.bak
+
+# Tauri
+src-tauri/target/
