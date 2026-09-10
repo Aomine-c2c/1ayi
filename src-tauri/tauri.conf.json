@@ -1,31 +1,40 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nicegram/nicegram4j/main/src/schema.json",
-  "identifier": "com.ayis.tauri",
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "AYIS",
   "version": "1.0.0",
-  "publisher": "AYIS",
-  "name": "Agricultural Yield Intelligence System",
-  "description": "Farm management, crop intelligence, weather, and yield analytics desktop app.",
-  "license": "MIT",
-  "version_editable": false,
-  "icon": [
-    "icons/32x32.png",
-    "icons/128x128.png",
-    "icons/128x128@2x.png",
-    "icons/icon.icns",
-    "icons/icon.ico"
-  ],
-  "windows": {
-    "with_global_shortcut": false,
-    "wix": null,
-    "nsis": null
+  "identifier": "com.ayis.tauri",
+  "build": {
+    "frontendDist": "../frontend/out",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
   },
-  "security": {
-    "csp": null
+  "app": {
+    "windows": [
+      {
+        "title": "AYIS — Agricultural Yield Intelligence System",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "decorations": true,
+        "transparent": false,
+        "visible": true,
+        "dragDropEnabled": true,
+        "fileDropEnabled": true,
+        "focus": true,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "theme": "Light"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data: tauri: tauri://localhost; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: tauri: tauri://localhost; style-src 'self' 'unsafe-inline' blob: tauri: tauri://localhost; img-src 'self' data: blob: https: tauri: tauri://localhost; connect-src 'self' http://localhost:* http://127.0.0.1:* https://api.open-meteo.com tauri: tauri://localhost; font-src 'self' data: blob: tauri: tauri://localhost; frame-src 'self' tauri: tauri://localhost; worker-src 'self' blob: tauri: tauri://localhost; media-src 'self' blob: tauri: tauri://localhost; manifest-src 'self' tauri: tauri://localhost; object-src 'none'; base-uri 'self' tauri: tauri://localhost; form-action 'self' tauri: tauri://localhost; frame-ancestors 'none';"
+    }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "identifier": "com.ayis.tauri",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -34,20 +43,13 @@
       "icons/icon.ico"
     ],
     "resources": [],
-    "category": " Productivity",
-    "short_description": "AYIS desktop app",
-    "long_description": "Agricultural Yield Intelligence System — Farm management, crop intelligence, weather, and yield analytics.",
-    "developer": {
-      "name": "AYIS",
-      "website": "https://github.com/Aomine-c2c/ayi"
-    },
-    "copyright": "Copyright 2026 AYIS",
-    "files": [],
+    "category": "Productivity",
+    "shortDescription": "AYIS — Agricultural Yield Intelligence System",
+    "longDescription": "Farm management, crop intelligence, weather, and yield analytics desktop application.",
     "windows": {
       "certificate": null,
       "digest": null,
       "timestamp": null
     }
-  },
-  "plugins": {}
+  }
 }
