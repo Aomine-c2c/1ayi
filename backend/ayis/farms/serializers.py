@@ -41,7 +41,7 @@ class FarmCreateSerializer(serializers.ModelSerializer):
         lat = attrs.get("latitude")
         if lon is not None and lat is not None:
             try:
-                from django.contrib.gis.geos import Point
+                from ayis.base.geo_compat import Point
                 attrs["location"] = Point(lon, lat, srid=4326)
             except Exception:
                 raise serializers.ValidationError({

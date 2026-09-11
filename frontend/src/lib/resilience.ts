@@ -1,11 +1,17 @@
-"""
-AYIS — test security resilience.
-
-Frontend resilience: when backend, Redis, or weather API are unavailable,
-the UI should degrade gracefully rather than crash.
-"""
+/**
+ * AYIS — test security resilience.
+ *
+ * Frontend resilience: when backend, Redis, or weather API are unavailable,
+ * the UI should degrade gracefully rather than crash.
+ */
 
 import React from 'react';
+
+function showToast(message: string, type: 'info' | 'warning' | 'error' = 'info') {
+  if (typeof window !== 'undefined') {
+    console.log(`[Toast ${type.toUpperCase()}]: ${message}`);
+  }
+}
 
 
 async function resilience_simulation() {

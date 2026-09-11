@@ -5,7 +5,6 @@ Custom user for AYIS plus the role models (Role, UserRole, RolePermission).
 """
 
 from django.contrib.auth.models import AbstractUser
-from django.contrib.gis.db import models as geo_models
 from django.db import models
 
 from ayis.users.role_models import Role, UserRole, RolePermission  # noqa: F401

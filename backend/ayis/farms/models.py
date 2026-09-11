@@ -6,9 +6,9 @@ picks them up in a single initial migration.
 This is the single source of truth for farm-related models.
 """
 
-from django.contrib.gis.db import models as geo_models
 from django.db import models
 from django.conf import settings
+from ayis.base.geo_compat import geo_models
 
 
 class Farm(models.Model):

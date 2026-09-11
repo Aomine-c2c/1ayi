@@ -1,3 +1,4 @@
+from datetime import date
 from django.db import models
 from ayis.farms.models import Farm
 from ayis.crops.models import Crop, Variety

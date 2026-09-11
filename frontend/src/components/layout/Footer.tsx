@@ -1,16 +1,9 @@
-import type { ReactElement } from 'react'
-
-export default function Footer(): ReactElement {
+export default function Footer() {
   return (
-    <footer className="bg-gray-800 text-gray-400 text-center py-4 mt-auto">
-      <div className="container mx-auto px-4">
-        <p className="text-sm">
-          Agricultural Yield Intelligence System — AYIS v1.0.0
-        </p>
-        <p className="text-xs mt-1">
-          Help farmers make better crop-production decisions.
-        </p>
-      </div>
+    <footer className="border-t border-gray-200 px-8 py-4 text-xs text-gray-400 flex items-center gap-3">
+      <span>AYIS v1.0.0</span>
+      <span>·</span>
+      <span>Agricultural Yield Intelligence System</span>
     </footer>
   )
 }

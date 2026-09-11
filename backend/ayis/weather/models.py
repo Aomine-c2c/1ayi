@@ -4,8 +4,8 @@ AYIS weather models.
 Weather data is OBSERVED (observations) or PREDICTED (forecasts).
 """
 
-from django.contrib.gis.db import models as geo_models
 from django.db import models
+from ayis.base.geo_compat import geo_models
 
 
 class WeatherSource(models.Model):
@@ -157,7 +157,7 @@ class WeatherObservation(models.Model):
 
     def save(self, *args, **kwargs):
         if self.location is None and self.latitude is not None and self.longitude is not None:
-            from django.contrib.gis.geos import Point
+            from ayis.base.geo_compat import Point
             self.location = Point(float(self.longitude), float(self.latitude), srid=4326)
         super().save(*args, **kwargs)
 
@@ -273,7 +273,7 @@ class WeatherForecast(models.Model):
 
     def save(self, *args, **kwargs):
         if self.location is None and self.latitude is not None and self.longitude is not None:
-            from django.contrib.gis.geos import Point
+            from ayis.base.geo_compat import Point
             self.location = Point(float(self.longitude), float(self.latitude), srid=4326)
         super().save(*args, **kwargs)
 

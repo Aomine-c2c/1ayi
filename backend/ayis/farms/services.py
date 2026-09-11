@@ -9,8 +9,9 @@ Encapsulates all farm business logic:
 - Bounding box queries
 """
 
-from django.contrib.gis.geos import Point
 from django.db.models import Q
+
+from ayis.base.geo_compat import Point
 
 from ayis.farms.models import Farm
 from ayis.users.models import User

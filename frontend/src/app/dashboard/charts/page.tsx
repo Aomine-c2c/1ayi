@@ -2,137 +2,163 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/lib/auth-context'
 
-function BarChart({ data, color }: { data: { label: string; value: number }[]; color: string }) {
-  const max = Math.max(...data.map(d => d.value), 1)
+interface BarChartProps {
+  data: { label: string; value: number; color?: string }[]
+  unit?: string
+  maxOverride?: number
+}
+
+function HBar({ data, unit = '', maxOverride }: BarChartProps) {
+  const max = maxOverride ?? Math.max(...data.map(d => d.value), 1)
   return (
-    <div className="space-y-2">
-      {data.map((item, i) => (
-        <div key={i} className="flex items-center gap-3">
-          <div className="w-32 text-sm text-gray-700 truncate">{item.label}</div>
-          <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
-            <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${(item.value / max) * 100}%` }} />
+    <div className="space-y-3">
+      {data.map((item, i) => {
+        const pct = Math.round((item.value / max) * 100)
+        return (
+          <div key={i} className="flex items-center gap-3">
+            <div className="w-28 text-sm text-gray-600 truncate text-right flex-shrink-0">{item.label}</div>
+            <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${item.color ?? 'bg-primary-500'}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <div className="w-20 text-right text-sm font-semibold text-gray-700 flex-shrink-0">
+              {item.value.toLocaleString()}{unit ? ` ${unit}` : ''}
+            </div>
           </div>
-          <div className="w-16 text-right text-sm font-medium text-gray-600">{item.value.toLocaleString()}</div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
 
-function Loading() { return <div className="text-center py-12 text-gray-500">Loading charts...</div> }
+function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="card-p">
+      <h3 className="font-semibold text-gray-800 mb-5">{title}</h3>
+      {children}
+    </div>
+  )
+}
 
 export default function ChartsPage() {
   const [loading, setLoading] = useState(true)
   const [farms, setFarms] = useState<any[]>([])
   const [error, setError] = useState('')
-  const { user } = useAuth()
+  const { token } = useAuth()
 
   useEffect(() => {
     const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1'
     const headers: Record<string, string> = {}
-    if (user?.token) headers['Authorization'] = `Bearer ${user.token}`
+    if (token) headers['Authorization'] = `Bearer ${token}`
 
     fetch(`${apiBase}/farms/`, { headers })
       .then(r => r.json())
       .then(data => setFarms(data))
       .catch(() => setError('Failed to load data'))
       .finally(() => setLoading(false))
-  }, [user])
+  }, [token])
 
   const farmAreaData = farms
     .filter((f: any) => f.area_ha)
-    .map((f: any) => ({ label: f.name, value: f.area_ha }))
+    .map((f: any) => ({ label: f.name, value: Number(f.area_ha) }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 8)
 
-  if (loading) return <Loading />
-  if (error) return <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">{error}</div>
+  // Aggregate crop data from nested cycles
+  const cropCounts: Record<string, number> = {}
+  farms.forEach((f: any) => {
+    (f.cycles ?? []).forEach((c: any) => {
+      if (c.crop_name) cropCounts[c.crop_name] = (cropCounts[c.crop_name] || 0) + 1
+    })
+  })
+  const cropDistData = Object.entries(cropCounts)
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8)
+
+  // Stage distribution
+  const stageCounts: Record<string, number> = {}
+  farms.forEach((f: any) => {
+    (f.cycles ?? []).forEach((c: any) => {
+      if (c.current_stage) stageCounts[c.current_stage] = (stageCounts[c.current_stage] || 0) + 1
+    })
+  })
+  const stageColors: Record<string, string> = {
+    PLANNED: 'bg-earth-400', PLANTED: 'bg-sky-500', GROWING: 'bg-primary-500',
+    NEAR_HARVEST: 'bg-earth-500', HARVESTED: 'bg-purple-500', CANCELLED: 'bg-red-400',
+  }
+  const stageData = Object.entries(stageCounts).map(([label, value]) => ({
+    label: label.replace('_', ' '), value, color: stageColors[label] ?? 'bg-gray-400'
+  })).sort((a, b) => b.value - a.value)
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Charts & Analytics</h1>
-        <p className="text-gray-500 mt-1">Visual summaries of your agricultural data</p>
+      <div className="page-header">
+        <h1 className="page-title">Analytics</h1>
+        <p className="page-subtitle">Visual summaries of your agricultural data</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Farm Area (hectares)</h2>
-          {farmAreaData.length > 0 ? (
-            <BarChart data={farmAreaData} color="bg-green-500" />
-          ) : (
-            <p className="text-gray-400 text-sm py-4 text-center">No farm area data available</p>
-          )}
-        </div>
+      {error && <div className="alert-error mb-4"><span>✕</span><span>{error}</span></div>}
 
-        <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Farm Status Distribution</h2>
-          <div className="space-y-3">
-            {[
-              { label: 'Active', value: 3, color: 'bg-green-500' },
-              { label: 'Inactive', value: 1, color: 'bg-gray-400' },
-            ].map(item => {
-              const total = 4
-              const pct = ((item.value / total) * 100).toFixed(0)
-              return (
-                <div key={item.label} className="flex items-center gap-3">
-                  <div className="w-24 text-sm text-gray-700">{item.label}</div>
-                  <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
-                    <div className={`h-full rounded-full ${item.color}`} style={{ width: `${pct}%` }} />
-                  </div>
-                  <div className="w-16 text-right text-sm font-medium text-gray-600">{item.value} ({pct}%)</div>
-                </div>
-              )
-            })}
-          </div>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="card-p h-56 skeleton" />)}
         </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-        <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Crop Distribution</h2>
-          <div className="space-y-2">
-            {[
-              { label: 'Maize', value: 2 },
-              { label: 'Beans', value: 1 },
-              { label: 'Sorghum', value: 1 },
-            ].map(item => {
-              const total = 4
-              return (
-                <div key={item.label} className="flex items-center gap-3">
-                  <div className="w-24 text-sm text-gray-700">{item.label}</div>
-                  <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
-                    <div className="h-full rounded-full bg-amber-500" style={{ width: `${(item.value / total) * 100}%` }} />
-                  </div>
-                  <div className="w-16 text-right text-sm font-medium text-gray-600">{item.value}</div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+          <ChartCard title="Farm Area (hectares)">
+            {farmAreaData.length > 0 ? (
+              <HBar data={farmAreaData} unit="ha" />
+            ) : (
+              <div className="empty-state py-8">
+                <span className="empty-icon">📐</span>
+                <p className="empty-desc">No farm area data yet</p>
+              </div>
+            )}
+          </ChartCard>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Yield Performance</h2>
-          <div className="space-y-3">
-            {[
-              { crop: 'Maize', yield_kg_ha: 2800, target: 3500, color: 'bg-green-500' },
-              { crop: 'Beans', yield_kg_ha: 1200, target: 1500, color: 'bg-amber-500' },
-              { crop: 'Sorghum', yield_kg_ha: 1800, target: 2200, color: 'bg-blue-500' },
-            ].map(item => {
-              const pct = Math.round((item.yield_kg_ha / item.target) * 100)
-              return (
-                <div key={item.crop} className="flex items-center gap-3">
-                  <div className="w-20 text-sm text-gray-700">{item.crop}</div>
-                  <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
-                    <div className={`h-full rounded-full ${item.color}`} style={{ width: `${pct}%` }} />
-                  </div>
-                  <div className="w-24 text-right text-xs text-gray-500">
-                    {item.yield_kg_ha.toLocaleString()} / {item.target.toLocaleString()} kg/ha
-                  </div>
+          <ChartCard title="Crop Distribution">
+            {cropDistData.length > 0 ? (
+              <HBar data={cropDistData.map(d => ({ ...d, color: 'bg-earth-400' }))} unit="cycles" />
+            ) : (
+              <div className="empty-state py-8">
+                <span className="empty-icon">🌿</span>
+                <p className="empty-desc">No crop cycle data yet</p>
+              </div>
+            )}
+          </ChartCard>
+
+          <ChartCard title="Cycle Stage Distribution">
+            {stageData.length > 0 ? (
+              <HBar data={stageData} unit="cycles" />
+            ) : (
+              <div className="empty-state py-8">
+                <span className="empty-icon">📈</span>
+                <p className="empty-desc">No cycle data yet</p>
+              </div>
+            )}
+          </ChartCard>
+
+          <ChartCard title="Summary">
+            <div className="space-y-3">
+              {[
+                { label: 'Total Farms', value: farms.length, color: 'text-primary-700' },
+                { label: 'Total Crop Cycles', value: farms.reduce((a: number, f: any) => a + (f.cycles?.length || 0), 0), color: 'text-sky-700' },
+                { label: 'Total Area (ha)', value: farms.reduce((a: number, f: any) => a + Number(f.area_ha || 0), 0).toFixed(1), color: 'text-earth-700' },
+                { label: 'Unique Crops', value: Object.keys(cropCounts).length, color: 'text-purple-700' },
+              ].map(item => (
+                <div key={item.label} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                  <span className="text-sm text-gray-500">{item.label}</span>
+                  <span className={`text-2xl font-bold ${item.color}`}>{item.value}</span>
                 </div>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          </ChartCard>
         </div>
-      </div>
+      )}
     </div>
   )
 }

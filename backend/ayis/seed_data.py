@@ -11,7 +11,7 @@ Weather data uses realistic Kenya climate ranges.
 """
 
 from faker import Faker
-from django.contrib.gis.geos import Point
+from ayis.base.geo_compat import Point
 from django.utils import timezone
 from datetime import date, timedelta
 from decimal import Decimal
