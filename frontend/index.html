@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AYIS — Agricultural Yield Intelligence System</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Mobile Drawer Backdrop -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
+
+    <!-- Sidebar Navigation Drawer -->
+    <aside class="sidebar" id="mainSidebar" aria-label="Main Navigation">
+      <div class="sidebar-header">
+        <div class="brand-icon">🌱</div>
+        <div>
+          <div class="brand-title">AYIS Intelligence</div>
+          <div class="brand-subtitle">C# & MySQL 8 Engine</div>
+        </div>
+      </div>
+
+      <!-- Dynamically Populated by Role Config -->
+      <ul class="nav-menu" id="dynamicNavMenu">
+        <!-- Injected via router.js based on active role -->
+      </ul>
+
+      <div style="padding: 16px 20px; border-top: 1px solid var(--border-subtle); font-size: 0.75rem; color: var(--text-muted); background: var(--bg-primary);">
+        <strong style="color: var(--text-primary);">AYIS Architecture</strong><br>
+        <span>Vanilla Web · C# Minimal APIs · MySQL 8</span>
+      </div>
+    </aside>
+
+    <!-- Main Viewport -->
+    <div class="main-wrapper">
+      <header class="top-navbar">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <!-- Mobile Hamburger Toggle -->
+          <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle navigation menu">
+            ☰
+          </button>
+          
+          <div class="header-status-badge">
+            <span class="status-dot"></span>
+            <span>C# Minimal API Backend · Ready</span>
+          </div>
+
+          <!-- Interactive Role Switcher -->
+          <div style="display: flex; align-items: center; gap: 8px; margin-left: 8px;">
+            <label for="activeRoleSelect" style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
+              Active Role:
+            </label>
+            <select id="activeRoleSelect" class="form-input" style="padding: 5px 10px; font-size: 0.8rem; font-weight: 700; width: auto; border-radius: var(--radius-xs);">
+              <option value="super_admin">🏛️ Super Administrator</option>
+              <option value="system_admin">🔐 System Administrator</option>
+              <option value="agronomist">🌾 Agronomist</option>
+              <option value="extension_officer">👥 Extension Officer</option>
+              <option value="field_officer">🔍 Field Officer</option>
+              <option value="weather_analyst">📡 Weather Analyst</option>
+              <option value="farm_manager">📋 Farm Manager</option>
+              <option value="farmer">🚜 Farmer</option>
+            </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <!-- Global Search Input -->
+          <div style="position: relative; display: flex; align-items: center;">
+            <input 
+              id="globalSearchInput" 
+              type="search" 
+              class="form-input" 
+              placeholder="🔍 Search farms, crops, alerts..." 
+              style="padding: 5px 12px; font-size: 0.8rem; width: 220px; border-radius: var(--radius-xs);"
+              aria-label="Global Search"
+            >
+          </div>
+
+          <!-- Notification Center Bell -->
+          <button class="btn btn-outline" id="btnTopNotifications" title="View Notifications" style="padding: 5px 10px; font-size: 0.85rem; position: relative;">
+            🔔 <span id="topNotifBadge" class="badge badge-rose" style="position: absolute; top: -6px; right: -6px; padding: 2px 5px; font-size: 0.65rem; border-radius: 9999px;">2</span>
+          </button>
+
+          <!-- Help Button -->
+          <button class="btn btn-outline" id="btnTopHelp" title="Help & Documentation" style="padding: 5px 8px; font-size: 0.85rem;">
+            ❓
+          </button>
+
+          <button class="auth-header-btn" id="btnTopSignIn" title="Sign in with another role or account">
+            🔑 Sign In
+          </button>
+          <button class="btn btn-outline" id="btnTopOnboard" style="padding: 6px 12px; font-size: 0.8rem;" title="Start farmer registration">
+            🌱 Onboard Farmer
+          </button>
+
+          <div class="user-profile-badge" id="userProfileBadge" style="cursor: pointer;" title="Click to inspect user session and permissions">
+            <div style="text-align: right;">
+              <div id="userRoleTitle" style="font-size: 0.875rem; font-weight: 800; color: var(--text-primary);">Chief Agrotechnology Officer</div>
+              <div id="userRoleSubtitle" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Global System Governance</div>
+            </div>
+            <div class="avatar" id="topAvatar" aria-label="User avatar">AY</div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content-viewport" id="contentViewport" role="region" aria-live="polite">
+        <!-- Rendered dynamically by views and router -->
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initRouter } from './js/router.js';
+    import { authViews } from './js/auth/authViews.js';
+    import { notificationComponents } from './js/components/notificationComponents.js';
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initRouter();
+      notificationComponents.initTopNavbarDropdown();
+
+      // Top Navbar Auth Buttons
+      document.getElementById('btnTopSignIn')?.addEventListener('click', () => {
+        authViews.showLoginModal();
+      });
+
+      document.getElementById('btnTopOnboard')?.addEventListener('click', () => {
+        authViews.showFarmerOnboardingWizard();
+      });
+
+      // User Profile Modal trigger
+      document.getElementById('userProfileBadge')?.addEventListener('click', () => {
+        authViews.showUserProfileModal();
+      });
+
+      // Notification Center Trigger
+      document.getElementById('btnTopNotifications')?.addEventListener('click', () => {
+        location.hash = '#notifications';
+      });
+
+      // Help & Documentation Trigger
+      document.getElementById('btnTopHelp')?.addEventListener('click', () => {
+        location.hash = '#help';
+      });
+
+      // Global Search Keyboard & Input Handler
+      const globalSearch = document.getElementById('globalSearchInput');
+      globalSearch?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && globalSearch.value.trim()) {
+          location.hash = '#search?q=' + encodeURIComponent(globalSearch.value.trim());
+        }
+      });
+
+      // Mobile Menu Drawer Handlers
+      const mobileBtn = document.getElementById('mobileMenuBtn');
+      const sidebar = document.getElementById('mainSidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
+
+      const toggleMobileMenu = () => {
+        sidebar.classList.toggle('open');
+        backdrop.classList.toggle('active');
+      };
+
+      const closeMobileMenu = () => {
+        sidebar.classList.remove('open');
+        backdrop.classList.remove('active');
+      };
+
+      mobileBtn?.addEventListener('click', toggleMobileMenu);
+      backdrop?.addEventListener('click', closeMobileMenu);
+
+      // Close mobile drawer on link selection
+      sidebar.addEventListener('click', (e) => {
+        if (e.target.closest('.nav-link')) {
+          closeMobileMenu();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
