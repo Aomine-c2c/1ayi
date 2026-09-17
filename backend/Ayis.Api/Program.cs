@@ -17,6 +17,7 @@ builder.Services.AddScoped<FarmRepository>();
 builder.Services.AddScoped<CropRepository>();
 builder.Services.AddScoped<WeatherAndIntelligenceRepository>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddSingleton<RecommendationEngineService>();
 
 // 2. JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "AYIS_ULTRA_SECURE_SECRET_KEY_FOR_JWT_TOKEN_SIGNING_2026_CHANGE_IN_PROD!";
@@ -214,12 +215,92 @@ app.MapGet("/api/v1/recommendations", async (WeatherAndIntelligenceRepository in
     return Results.Ok(recs);
 }).WithName("GetRecommendations").WithTags("Recommendations");
 
+// Intelligence: Scenario 1 - Pre-Season Crop Selection & Planning
+app.MapGet("/api/v1/recommendations/pre-season-crops", (
+    RecommendationEngineService engine,
+    decimal? rainfallMm,
+    decimal? meanTempC,
+    decimal? humidityPct,
+    decimal? soilPh,
+    string? soilType,
+    string? drainage) =>
+{
+    var rain = rainfallMm ?? 680m;
+    var temp = meanTempC ?? 21.5m;
+    var hum = humidityPct ?? 65m;
+    var ph = soilPh ?? 6.4m;
+    var soil = soilType ?? "Volcanic Loam";
+    var dr = drainage ?? "Well drained";
+
+    var results = engine.EvaluatePreSeasonCropSelection(rain, temp, hum, ph, soil, dr);
+    return Results.Ok(new
+    {
+        scenario = "Scenario 1: Pre-Season Crop Selection & Planning",
+        inputs = new { rainfallMm = rain, meanTempC = temp, humidityPct = hum, soilPh = ph, soilType = soil, drainage = dr },
+        recommendations = results
+    });
+}).WithName("GetPreSeasonCropRecommendations").WithTags("Recommendations");
+
+// Intelligence: Scenario 2 - In-Season Daily Operational Farming Directives
+app.MapGet("/api/v1/recommendations/daily-directives", (
+    RecommendationEngineService engine,
+    decimal? tempC,
+    decimal? humidityPct,
+    decimal? windSpeedKmh,
+    decimal? rain24hMm,
+    decimal? forecastRain48hMm,
+    string? crop,
+    string? stage,
+    string? field) =>
+{
+    var t = tempC ?? 22.4m;
+    var h = humidityPct ?? 68m;
+    var w = windSpeedKmh ?? 6.2m;
+    var r24 = rain24hMm ?? 18.2m;
+    var r48 = forecastRain48hMm ?? 14.0m;
+    var crp = crop ?? "Highland Hybrid Maize (H614D)";
+    var stg = stage ?? "Vegetative V6";
+    var fld = field ?? "North Field A";
+
+    var directives = engine.EvaluateInSeasonDirectives(t, h, w, r24, r48, crp, stg, fld);
+    return Results.Ok(new
+    {
+        scenario = "Scenario 2: In-Season Daily Farming Operations",
+        currentConditions = new { tempC = t, humidityPct = h, windSpeedKmh = w, rainLast24hMm = r24, forecastRainNext48hMm = r48 },
+        cropContext = new { crop = crp, stage = stg, field = fld },
+        directives
+    });
+}).WithName("GetDailyOperationalDirectives").WithTags("Recommendations");
+
 // Notifications
 app.MapGet("/api/v1/notifications", async (WeatherAndIntelligenceRepository notifRepo) =>
 {
     var notifications = await notifRepo.GetNotificationsAsync();
     return Results.Ok(notifications);
 }).WithName("GetNotifications").WithTags("Notifications");
+
+// Agronomic Rules & Baselines (Authored and Maintained by Agronomist)
+app.MapGet("/api/v1/agronomic-rules", async (WeatherAndIntelligenceRepository repo, string? cropId) =>
+{
+    var rules = await repo.GetAgronomicRulesAsync(cropId);
+    return Results.Ok(rules);
+}).WithName("GetAgronomicRules").WithTags("AgronomicRules");
+
+app.MapPost("/api/v1/agronomic-rules", async (AgronomicRule rule, WeatherAndIntelligenceRepository repo) =>
+{
+    if (string.IsNullOrEmpty(rule.Title) || string.IsNullOrEmpty(rule.ActionDirective))
+    {
+        return Results.BadRequest(new { message = "Title and ActionDirective are required." });
+    }
+    if (string.IsNullOrEmpty(rule.Id)) rule.Id = Guid.NewGuid().ToString();
+    rule.CreatedAt = DateTime.UtcNow;
+    rule.UpdatedAt = DateTime.UtcNow;
+
+    var success = await repo.CreateAgronomicRuleAsync(rule);
+    return success 
+        ? Results.Created($"/api/v1/agronomic-rules/{rule.Id}", rule) 
+        : Results.Problem("Failed to create rule.");
+}).WithName("CreateAgronomicRule").WithTags("AgronomicRules");
 
 app.Run();
 

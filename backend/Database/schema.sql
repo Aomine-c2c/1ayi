@@ -222,6 +222,31 @@ CREATE TABLE IF NOT EXISTS `recommendations` (
     CONSTRAINT `fk_recommendations_field` FOREIGN KEY (`field_id`) REFERENCES `fields` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- Agronomic Rules Engine (Authored & Configured by Agronomist)
+CREATE TABLE IF NOT EXISTS `agronomic_rules` (
+    `id` VARCHAR(36) NOT NULL PRIMARY KEY,
+    `crop_id` VARCHAR(36) NULL,
+    `rule_type` ENUM('PRE_SEASON_CROP_SELECTION', 'SPRAY_WINDOW', 'FERTILIZER_TIMING', 'DISEASE_RISK', 'IRRIGATION_DEFICIT') NOT NULL,
+    `title` VARCHAR(255) NOT NULL,
+    `growth_stage` VARCHAR(50) NULL,
+    `trigger_condition` VARCHAR(255) NOT NULL,
+    `min_temp_c` DECIMAL(5, 2) NULL,
+    `max_temp_c` DECIMAL(5, 2) NULL,
+    `min_rainfall_mm` DECIMAL(7, 2) NULL,
+    `max_rainfall_mm` DECIMAL(7, 2) NULL,
+    `min_humidity_pct` DECIMAL(5, 2) NULL,
+    `max_wind_kmh` DECIMAL(5, 2) NULL,
+    `action_directive` TEXT NOT NULL,
+    `rationale` TEXT NOT NULL,
+    `urgency` ENUM('LOW', 'MEDIUM', 'HIGH', 'CRITICAL') NOT NULL DEFAULT 'MEDIUM',
+    `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
+    `authored_by` VARCHAR(36) NULL,
+    `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    CONSTRAINT `fk_rules_crop` FOREIGN KEY (`crop_id`) REFERENCES `crops` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_rules_author` FOREIGN KEY (`authored_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
 -- 7. Notifications, Reports & Audit
 CREATE TABLE IF NOT EXISTS `notifications` (
     `id` VARCHAR(36) NOT NULL PRIMARY KEY,

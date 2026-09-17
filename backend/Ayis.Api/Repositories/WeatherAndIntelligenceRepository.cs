@@ -117,4 +117,48 @@ public class WeatherAndIntelligenceRepository
 
         return await conn.QueryAsync<NotificationItem>(sql, new { UserId = userId });
     }
+
+    public async Task<IEnumerable<AgronomicRule>> GetAgronomicRulesAsync(string? cropId = null)
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"
+            SELECT 
+                id AS Id,
+                crop_id AS CropId,
+                rule_type AS RuleType,
+                title AS Title,
+                growth_stage AS GrowthStage,
+                trigger_condition AS TriggerCondition,
+                min_temp_c AS MinTempC,
+                max_temp_c AS MaxTempC,
+                min_rainfall_mm AS MinRainfallMm,
+                max_rainfall_mm AS MaxRainfallMm,
+                min_humidity_pct AS MinHumidityPct,
+                max_wind_kmh AS MaxWindKmh,
+                action_directive AS ActionDirective,
+                rationale AS Rationale,
+                urgency AS Urgency,
+                is_active AS IsActive,
+                authored_by AS AuthoredBy,
+                created_at AS CreatedAt,
+                updated_at AS UpdatedAt
+            FROM agronomic_rules
+            WHERE is_active = 1 AND (@CropId IS NULL OR crop_id = @CropId OR crop_id IS NULL)
+            ORDER BY created_at DESC;";
+
+        return await conn.QueryAsync<AgronomicRule>(sql, new { CropId = cropId });
+    }
+
+    public async Task<bool> CreateAgronomicRuleAsync(AgronomicRule rule)
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"
+            INSERT INTO agronomic_rules 
+            (id, crop_id, rule_type, title, growth_stage, trigger_condition, min_temp_c, max_temp_c, min_rainfall_mm, max_rainfall_mm, min_humidity_pct, max_wind_kmh, action_directive, rationale, urgency, is_active, authored_by)
+            VALUES 
+            (@Id, @CropId, @RuleType, @Title, @GrowthStage, @TriggerCondition, @MinTempC, @MaxTempC, @MinRainfallMm, @MaxRainfallMm, @MinHumidityPct, @MaxWindKmh, @ActionDirective, @Rationale, @Urgency, @IsActive, @AuthoredBy);";
+
+        var affected = await conn.ExecuteAsync(sql, rule);
+        return affected > 0;
+    }
 }

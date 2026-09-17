@@ -161,3 +161,26 @@ public class NotificationItem
     public bool IsRead { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
+
+public class AgronomicRule
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string? CropId { get; set; }
+    public string RuleType { get; set; } = "FERTILIZER_TIMING";
+    public string Title { get; set; } = string.Empty;
+    public string? GrowthStage { get; set; }
+    public string TriggerCondition { get; set; } = string.Empty;
+    public decimal? MinTempC { get; set; }
+    public decimal? MaxTempC { get; set; }
+    public decimal? MinRainfallMm { get; set; }
+    public decimal? MaxRainfallMm { get; set; }
+    public decimal? MinHumidityPct { get; set; }
+    public decimal? MaxWindKmh { get; set; }
+    public string ActionDirective { get; set; } = string.Empty;
+    public string Rationale { get; set; } = string.Empty;
+    public string Urgency { get; set; } = "MEDIUM";
+    public bool IsActive { get; set; } = true;
+    public string? AuthoredBy { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}

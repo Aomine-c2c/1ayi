@@ -358,6 +358,49 @@ export const api = {
   },
 
   // 6. Field Operations & Inspections (MySQL: `field_inspections`, `field_observations`)
+  // 5. Intelligence & Agronomic Recommendations (MySQL: `suitability_assessments`, `recommendations`)
+  async getFieldSuitability(fieldId) {
+    return await this.request(`/intelligence/suitability?fieldId=${encodeURIComponent(fieldId)}`);
+  },
+
+  async getYieldPredictions(cycleId) {
+    return await this.request(`/intelligence/yield-predictions?cycleId=${encodeURIComponent(cycleId)}`);
+  },
+
+  async getRecommendations(fieldId = null) {
+    const endpoint = fieldId 
+      ? `/recommendations?fieldId=${encodeURIComponent(fieldId)}`
+      : '/recommendations';
+    return await this.request(endpoint);
+  },
+
+  // Scenario 1: Pre-Season Crop Selection
+  async getPreSeasonCropRecommendations(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return await this.request(`/recommendations/pre-season-crops?${query}`);
+  },
+
+  // Scenario 2: In-Season Daily Operational Directives
+  async getDailyOperationalDirectives(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return await this.request(`/recommendations/daily-directives?${query}`);
+  },
+
+  // Agronomic Rules & Thresholds (Authored by Agronomist)
+  async getAgronomicRules(cropId = null) {
+    const endpoint = cropId 
+      ? `/agronomic-rules?cropId=${encodeURIComponent(cropId)}`
+      : '/agronomic-rules';
+    return await this.request(endpoint);
+  },
+
+  async createAgronomicRule(ruleData) {
+    return await this.request('/agronomic-rules', {
+      method: 'POST',
+      body: JSON.stringify(ruleData)
+    });
+  },
+
   async getInspections(params = {}) {
     const query = new URLSearchParams(params).toString();
     return await this.request(`/inspections?${query}`);

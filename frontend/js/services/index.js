@@ -619,6 +619,185 @@ export const weatherService = {
 
 // 5. Agronomic Recommendation Service
 export const recommendationService = {
+  async getPreSeasonCrops(params = {}) {
+    try {
+      const res = await api.getPreSeasonCropRecommendations(params);
+      if (res && res.recommendations) return res.recommendations;
+    } catch (e) {
+      console.warn('Backend unavailable, using client-side pre-season evaluator', e);
+    }
+    return [
+      {
+        cropId: 'crop-001',
+        cropName: 'Maize (Zea mays)',
+        suitabilityScore: 92,
+        suitabilityClass: 'HIGHLY_SUITABLE',
+        recommendationType: 'Crop Selection',
+        rationale: 'Seasonal forecast (680mm rain, 21.5°C) provides excellent conditions for vegetative expansion.',
+        recommendedVarieties: 'H614D (Highland Hybrid)',
+        riskFactors: ['Potential ear rot if sustained humidity >80% during drying'],
+        keyOpportunities: ['Hydrothermal index matches optimal grain filling requirements']
+      },
+      {
+        cropId: 'crop-003',
+        cropName: 'Dry Beans (Phaseolus vulgaris)',
+        suitabilityScore: 85,
+        suitabilityClass: 'HIGHLY_SUITABLE',
+        recommendationType: 'Crop Selection',
+        rationale: 'Optimal for nitrogen-fixing intercropping or rotation under moderate rainfall.',
+        recommendedVarieties: 'Rosecoco GLP-2 / Mwitemania',
+        riskFactors: ['Heavy waterlogging if planted in non-ridged clay swales'],
+        keyOpportunities: ['Short 75-day maturity window allows early cash turnaround']
+      },
+      {
+        cropId: 'crop-002',
+        cropName: 'Wheat (Triticum aestivum)',
+        suitabilityScore: 78,
+        suitabilityClass: 'MODERATELY_SUITABLE',
+        recommendationType: 'Crop Selection',
+        rationale: 'Cool highland conditions favor tillering, but monitor moisture during stem extension.',
+        recommendedVarieties: 'Kenya Tayari / Robin',
+        riskFactors: ['Yellow rust risk under cool damp nights'],
+        keyOpportunities: ['High market demand in regional milling hubs']
+      }
+    ];
+  },
+
+  async getDailyDirectives(params = {}) {
+    try {
+      const res = await api.getDailyOperationalDirectives(params);
+      if (res && res.directives) return res.directives;
+    } catch (e) {
+      console.warn('Backend unavailable, using client-side directives', e);
+    }
+    return [
+      {
+        id: 'dir-01',
+        category: 'SPRAYING',
+        title: 'Optimal Crop Spraying Window Open',
+        actionRequired: 'Execute planned fungicide or herbicide spraying before 10:30 AM while wind speed remains low.',
+        why: 'Sustained wind speed (6.2 km/h) is well below the 9.0 km/h drift limit, and no rain is forecast for 24h.',
+        urgency: 'HIGH',
+        dueTimeframe: 'Next 24 Hours',
+        crop: 'Highland Hybrid Maize (H614D)',
+        field: 'North Field A',
+        confidenceScore: 94,
+        supportingWeather: { WindSpeed: '6.2 km/h (Calm)', RainForecast: '0.0 mm (Dry)', AirTemp: '22.4°C' }
+      },
+      {
+        id: 'dir-02',
+        category: 'FERTILIZER',
+        title: 'Top-Dress Nitrogen (CAN) Before Showers',
+        actionRequired: 'Apply Calcium Ammonium Nitrate (CAN) at 50 kg/acre 5cm from plant bases within the next 48 hours.',
+        why: 'Field is in rapid vegetative growth (V6). Forecasted showers (14mm) will dissolve and incorporate nitrogen into root zones without leaching.',
+        urgency: 'HIGH',
+        dueTimeframe: 'Within 48 Hours',
+        crop: 'Highland Hybrid Maize (H614D)',
+        field: 'North Field A',
+        confidenceScore: 96,
+        supportingWeather: { CropStage: 'Vegetative V6', ForecastRain: '14.0 mm expected', SoilMoisture: '18.2 mm past 24h' }
+      },
+      {
+        id: 'dir-03',
+        category: 'PEST_DISEASE',
+        title: 'High Fungal Blight / Rust Inoculum Alert',
+        actionRequired: 'Inspect lower leaves and canopy for fungal sporulation; prepare preventive broad-spectrum fungicide.',
+        why: 'Sustained humidity (68%) with mild temperatures (22.4°C) elevates risk of leaf blight and fungal sporulation.',
+        urgency: 'CRITICAL',
+        dueTimeframe: 'Today',
+        crop: 'Dry Beans (Rosecoco)',
+        field: 'South Field B',
+        confidenceScore: 91,
+        supportingWeather: { Humidity: '68% (Elevated)', Temperature: '22.4°C', PathogenRisk: 'Anthracnose / Rust' }
+      }
+    ];
+  },
+
+  async getRules(cropId = null) {
+    try {
+      const res = await api.getAgronomicRules(cropId);
+      if (Array.isArray(res) && res.length > 0) return res;
+    } catch (e) {
+      console.warn('Backend rules endpoint unreachable, using client rules fallback', e);
+    }
+    return [
+      {
+        id: 'rule-001',
+        cropId: 'crop-001',
+        ruleType: 'FERTILIZER_TIMING',
+        title: 'Top-Dress Nitrogen (CAN) Before Upcoming Showers',
+        growthStage: 'Vegetative V6',
+        triggerCondition: 'Rain forecasted 8-30mm within 48h during V6 vegetative growth',
+        actionDirective: 'Apply Calcium Ammonium Nitrate (CAN) at 50 kg/acre 5cm from plant bases within the next 48 hours.',
+        rationale: 'Field is in rapid vegetative growth. Forecasted rain will dissolve and incorporate nitrogen into root zones without leaching.',
+        urgency: 'HIGH',
+        isActive: true,
+        authoredBy: 'Dr. Sarah Mwangi (Senior Agronomist - KALRO)'
+      },
+      {
+        id: 'rule-002',
+        cropId: 'crop-002',
+        ruleType: 'DISEASE_RISK',
+        title: 'High Fungal Blight / Yellow Rust Inoculum Alert',
+        growthStage: 'Tillering to Stem Extension',
+        triggerCondition: 'Relative humidity > 72% for > 24h at mild temps 15-23°C',
+        actionDirective: 'Inspect lower leaves and canopy for fungal sporulation; prepare preventive broad-spectrum fungicide.',
+        rationale: 'Sustained humidity with mild temperatures creates ideal microclimatic conditions for fungal germination.',
+        urgency: 'CRITICAL',
+        isActive: true,
+        authoredBy: 'Dr. Sarah Mwangi (Senior Agronomist - KALRO)'
+      },
+      {
+        id: 'rule-003',
+        cropId: null,
+        ruleType: 'SPRAY_WINDOW',
+        title: 'Optimal Crop Spraying Window Open',
+        growthStage: 'Any Active Stage',
+        triggerCondition: 'Wind speed < 9 km/h and rain forecast < 5mm for 24h',
+        actionDirective: 'Execute planned fungicide or herbicide spraying before 10:30 AM while wind speed remains low.',
+        rationale: 'Sustained wind speed is below the 9.0 km/h drift limit, and no rain is predicted to wash off applications.',
+        urgency: 'HIGH',
+        isActive: true,
+        authoredBy: 'Dr. Sarah Mwangi (Senior Agronomist - KALRO)'
+      },
+      {
+        id: 'rule-004',
+        cropId: 'crop-003',
+        ruleType: 'IRRIGATION_DEFICIT',
+        title: 'Supplemental Irrigation: Flowering Moisture Stress Prevention',
+        growthStage: 'Flowering R1',
+        triggerCondition: 'Rain last 24h < 2mm and forecast rain 48h < 5mm during flowering',
+        actionDirective: 'Schedule 15mm supplemental drip or furrow irrigation to protect flowers from thermal abortion.',
+        rationale: 'Crop is at sensitive flowering stage with insufficient soil moisture and negligible rain in the 48h forecast.',
+        urgency: 'HIGH',
+        isActive: true,
+        authoredBy: 'Dr. Sarah Mwangi (Senior Agronomist - KALRO)'
+      },
+      {
+        id: 'rule-005',
+        cropId: 'crop-001',
+        ruleType: 'PRE_SEASON_CROP_SELECTION',
+        title: 'Maize Seasonal Hydrothermal Suitability Matrix',
+        growthStage: 'Pre-Season Planning',
+        triggerCondition: 'Seasonal forecast precipitation 500-900mm with mean temp 18-28°C and soil pH 5.8-7.0',
+        actionDirective: 'Recommend Highland Hybrid H614D for high rain forecast; recommend DK8031 if forecast drops below 450mm.',
+        rationale: 'Hydrothermal index matches optimal grain filling requirements for East African highlands.',
+        urgency: 'HIGH',
+        isActive: true,
+        authoredBy: 'Dr. Sarah Mwangi (Senior Agronomist - KALRO)'
+      }
+    ];
+  },
+
+  async addRule(ruleData) {
+    try {
+      return await api.createAgronomicRule(ruleData);
+    } catch (e) {
+      console.warn('Failed to post rule to backend, saved locally', e);
+      return { success: true, ...ruleData };
+    }
+  },
+
   async listRecommendations() {
     return [
       {

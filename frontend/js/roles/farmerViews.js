@@ -541,43 +541,148 @@ export const farmerViews = {
   },
 
   // =========================================================================
-  // 5. RECOMMENDATIONS CENTER (Reason, Confidence, Weather Support, Actions)
+  // 5. RECOMMENDATIONS CENTER (Scenario 1: Pre-Season Crops & Scenario 2: Daily Operations)
   // =========================================================================
   async recommendations(container) {
-    const recs = await recommendationService.listRecommendations();
+    const preSeasonCrops = await recommendationService.getPreSeasonCrops();
+    const dailyDirectives = await recommendationService.getDailyDirectives();
 
     container.innerHTML = `
       ${ui.breadcrumbs([{ label: 'My Farm Assistant', hash: '#dashboard' }, { label: 'Recommendations' }])}
 
-      <div class="panel" style="padding: 24px; margin-bottom: 24px;">
-        <h1 style="font-size: 1.5rem; font-weight: 900; color: var(--text-primary);">Farmer Recommendation Center</h1>
-        <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 4px;">
-          Clear, evidence-backed advice combining crop growth stages with incoming meteorological forecasts.
-        </p>
+      <div class="panel" style="padding: 24px; margin-bottom: 24px; background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); border: 1px solid #bbf7d0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <span class="badge badge-green">AGRO-INTELLIGENCE DECISION SUPPORT</span>
+              <span style="font-size: 0.8rem; font-weight: 700; color: var(--primary-dark);">Live Sensor & Forecast Engine</span>
+            </div>
+            <h1 style="font-size: 1.6rem; font-weight: 900; color: var(--text-primary); letter-spacing: -0.5px;">
+              Farmer Recommendation & Decision Center
+            </h1>
+            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 4px; max-width: 700px;">
+              Translating complex weather forecasts, moisture levels, and soil metrics into clear farming instructions.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary" id="tabBtnDaily" style="font-size: 0.85rem;">⚡ In-Season Daily Actions</button>
+            <button class="btn btn-outline" id="tabBtnPreSeason" style="font-size: 0.85rem;">🌱 Pre-Season Crop Selection</button>
+          </div>
+        </div>
       </div>
 
-      <!-- Recommendation Cards List -->
-      <div style="display: flex; flex-direction: column; gap: 20px;">
-        <!-- Detailed Recommendation Card 1: Maize Top Dressing -->
-        <div class="panel" style="padding: 24px; border-left: 6px solid var(--accent-amber);">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
-            <div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <span class="badge badge-amber">FERTILIZER APPLICATION</span>
-                <span style="font-size: 0.8rem; font-weight: 700; color: var(--accent-amber);">Urgency: Medium · Due in 3 days</span>
+      <!-- SECTION 1: IN-SEASON DAILY OPERATIONAL DIRECTIVES (SCENARIO 2) -->
+      <div id="sectionDailyDirectives" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 32px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">
+              Scenario 2: In-Season Daily Operational Directives
+            </h2>
+            <p style="font-size: 0.825rem; color: var(--text-muted);">Real-time instructions based on live 24h weather observations and upcoming 48h forecasts.</p>
+          </div>
+          <span class="badge badge-green">${dailyDirectives.length} Actions Generated</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          ${dailyDirectives.map(d => `
+            <div class="panel" style="padding: 22px; border-left: 6px solid ${d.urgency === 'CRITICAL' ? 'var(--accent-rose, #ef4444)' : d.category === 'FERTILIZER' ? 'var(--accent-amber)' : 'var(--primary)'};">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 10px;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                    <span class="badge ${d.urgency === 'CRITICAL' ? 'badge-rose' : d.category === 'FERTILIZER' ? 'badge-amber' : 'badge-blue'}">${d.category}</span>
+                    <span style="font-size: 0.8rem; font-weight: 800; color: var(--text-muted);">Urgency: ${d.urgency} · Due: ${d.dueTimeframe}</span>
+                  </div>
+                  <h3 style="font-size: 1.2rem; font-weight: 900; color: var(--text-primary); margin: 4px 0;">${d.title}</h3>
+                  <div style="font-size: 0.825rem; color: var(--text-muted);">Target: <strong>${d.crop}</strong> (${d.field})</div>
+                </div>
+                <span class="badge badge-green" style="font-size: 0.825rem; padding: 4px 10px;">${d.confidenceScore}% Model Confidence</span>
               </div>
-              <h2 style="font-size: 1.25rem; font-weight: 900; color: var(--text-primary);">
-                Consider applying nitrogen top-dressing (CAN) within the next 3 days
-              </h2>
-              <div style="font-size: 0.825rem; color: var(--text-muted); margin-top: 2px;">
-                Relevant Crop: <strong>Maize (H614D)</strong> · Target Farm: <strong>Green Valley Model Farm (North Field A)</strong>
+
+              <!-- Suggested Action -->
+              <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin: 12px 0;">
+                <strong style="color: var(--primary-dark); font-size: 0.875rem; display: block; margin-bottom: 4px;">⚡ Suggested Farming Action:</strong>
+                <p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.4; margin: 0;">${d.actionRequired}</p>
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;"><strong>Why:</strong> ${d.why}</div>
+              </div>
+
+              <!-- Supporting Telemetry Grid -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 12px;">
+                ${Object.entries(d.supportingWeather || {}).map(([k, v]) => `
+                  <div style="background: #ffffff; border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-xs); font-size: 0.775rem;">
+                    <span style="color: var(--text-muted); font-weight: 700; display: block;">${k}:</span>
+                    <strong style="color: var(--text-primary);">${v}</strong>
+                  </div>
+                `).join('')}
+              </div>
+
+              <div style="display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end;">
+                <button class="btn btn-outline" style="font-size: 0.8rem; padding: 6px 14px;" onclick="alert('Directive marked as completed in farm activity log.')">✔ Mark as Done</button>
+                <button class="btn btn-primary" style="font-size: 0.8rem; padding: 6px 14px;" onclick="alert('Action scheduled in your mobile calendar.')">📅 Add to Schedule</button>
               </div>
             </div>
-            <span class="badge badge-green" style="font-size: 0.85rem; padding: 6px 14px;">92% Model Confidence</span>
-          </div>
+          `).join('')}
+        </div>
+      </div>
 
-          <!-- Suggested Action -->
-          <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 16px; margin: 16px 0;">
+      <!-- SECTION 2: PRE-SEASON CROP SELECTION (SCENARIO 1) -->
+      <div id="sectionPreSeasonCrops" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">
+              Scenario 1: Pre-Season Crop Selection & Suitability Ranking
+            </h2>
+            <p style="font-size: 0.825rem; color: var(--text-muted);">Long-range seasonal forecast (680mm rain, 21.5°C mean, 65% humidity) matched against crop profiles.</p>
+          </div>
+          <span class="badge badge-green">Seasonal Outlook: Favourable</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px;">
+          ${preSeasonCrops.map(c => `
+            <div class="panel" style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid ${c.suitabilityScore >= 85 ? 'var(--primary)' : c.suitabilityScore >= 70 ? 'var(--accent-amber)' : 'var(--accent-rose)'};">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span class="badge ${c.suitabilityScore >= 85 ? 'badge-green' : c.suitabilityScore >= 70 ? 'badge-amber' : 'badge-rose'}">
+                    ${c.suitabilityClass.replace('_', ' ')}
+                  </span>
+                  <strong style="font-size: 1.1rem; color: var(--primary-dark); font-weight: 900;">${c.suitabilityScore}% Score</strong>
+                </div>
+
+                <h3 style="font-size: 1.15rem; font-weight: 900; color: var(--text-primary); margin: 6px 0;">${c.cropName}</h3>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; margin-bottom: 12px;">${c.rationale}</p>
+
+                <div style="background: var(--bg-primary); padding: 10px 12px; border-radius: var(--radius-xs); font-size: 0.8rem; margin-bottom: 12px;">
+                  <strong style="color: var(--primary-dark);">Recommended Variety:</strong>
+                  <div style="color: var(--text-primary); font-weight: 700; margin-top: 2px;">${c.recommendedVarieties}</div>
+                </div>
+
+                <div style="font-size: 0.775rem; color: var(--text-muted); margin-bottom: 6px;">
+                  <strong style="color: var(--primary-dark);">Key Opportunities:</strong>
+                  <ul style="margin: 4px 0 8px 16px; padding: 0;">
+                    ${(c.keyOpportunities || []).map(o => `<li>${o}</li>`).join('')}
+                  </ul>
+                </div>
+
+                <div style="font-size: 0.775rem; color: var(--text-muted);">
+                  <strong style="color: var(--accent-amber);">Risks to Mitigate:</strong>
+                  <ul style="margin: 4px 0 0 16px; padding: 0;">
+                    ${(c.riskFactors || []).map(r => `<li>${r}</li>`).join('')}
+                  </ul>
+                </div>
+              </div>
+
+              <button class="btn btn-outline" style="margin-top: 18px; width: 100%; font-size: 0.8rem; justify-content: center;" onclick="location.hash='#crops'">
+                Select for Planting Season →
+              </button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Traditional Detailed Advisories Archive -->
+      <div class="panel" style="padding: 24px; margin-top: 16px;">
+        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin-bottom: 12px;">
+          📚 Agronomic Advisory Archive & Soil Health Records
+        </h3>
             <strong style="color: var(--primary-dark); font-size: 0.9rem; display: block; margin-bottom: 4px;">💡 Suggested Action:</strong>
             <p style="font-size: 0.875rem; color: var(--text-secondary); line-height: 1.4;">
               Apply 50 kg/acre Calcium Ammonium Nitrate (CAN) placed 5cm away from plant stems. 
@@ -651,6 +756,28 @@ export const farmerViews = {
         </div>
       </div>
     `;
+
+    // Interactive Tab Switching
+    const tabDaily = container.querySelector('#tabBtnDaily');
+    const tabPre = container.querySelector('#tabBtnPreSeason');
+    const secDaily = container.querySelector('#sectionDailyDirectives');
+    const secPre = container.querySelector('#sectionPreSeasonCrops');
+
+    if (tabDaily && tabPre && secDaily && secPre) {
+      tabDaily.addEventListener('click', () => {
+        tabDaily.className = 'btn btn-primary';
+        tabPre.className = 'btn btn-outline';
+        secDaily.style.display = 'flex';
+        secPre.style.display = 'none';
+      });
+
+      tabPre.addEventListener('click', () => {
+        tabPre.className = 'btn btn-primary';
+        tabDaily.className = 'btn btn-outline';
+        secDaily.style.display = 'none';
+        secPre.style.display = 'flex';
+      });
+    }
   },
 
   // =========================================================================

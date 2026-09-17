@@ -113,3 +113,16 @@ VALUES
 ('notif-001', 'u-003', 'Top-dressing Due in 4 Days', 'CAN fertilizer application recommended for North Field A.', 'TASK', 0),
 ('notif-002', 'u-003', 'Rainfall Alert', 'Expect 15-25mm precipitation over Nakuru High Plains over the next 48 hours.', 'ALERT', 0)
 ON DUPLICATE KEY UPDATE `title` = VALUES(`title`);
+
+-- Baseline Agronomic Rules (Authored by Senior Agronomist: Dr. Sarah Mwangi 'u-002')
+INSERT INTO `agronomic_rules` (
+    `id`, `crop_id`, `rule_type`, `title`, `growth_stage`, `trigger_condition`, 
+    `min_temp_c`, `max_temp_c`, `min_rainfall_mm`, `max_rainfall_mm`, `min_humidity_pct`, `max_wind_kmh`, 
+    `action_directive`, `rationale`, `urgency`, `is_active`, `authored_by`
+) VALUES
+('rule-001', 'crop-001', 'FERTILIZER_TIMING', 'Top-Dress Nitrogen (CAN) Before Upcoming Showers', 'Vegetative V6', 'Rain forecasted 8-30mm within 48h during V6 vegetative growth', 16.0, 28.0, 8.0, 30.0, NULL, NULL, 'Apply Calcium Ammonium Nitrate (CAN) at 50 kg/acre 5cm from plant bases within the next 48 hours.', 'Field is in rapid vegetative growth. Forecasted rain will dissolve and incorporate nitrogen into root zones without leaching.', 'HIGH', 1, 'u-002'),
+('rule-002', 'crop-002', 'DISEASE_RISK', 'High Fungal Blight / Yellow Rust Inoculum Alert', 'Tillering to Stem Extension', 'Relative humidity > 72% for > 24h at mild temps 15-23°C', 15.0, 23.0, NULL, NULL, 72.0, NULL, 'Inspect lower leaves and canopy for fungal sporulation; prepare preventive broad-spectrum fungicide.', 'Sustained humidity with mild temperatures creates ideal microclimatic conditions for fungal germination.', 'CRITICAL', 1, 'u-002'),
+('rule-003', NULL, 'SPRAY_WINDOW', 'Optimal Crop Spraying Window Open', 'Any Active Stage', 'Wind speed < 9 km/h and rain forecast < 5mm for 24h', 14.0, 26.0, NULL, 5.0, NULL, 9.0, 'Execute planned fungicide or herbicide spraying before 10:30 AM while wind speed remains low.', 'Sustained wind speed is below the 9.0 km/h drift limit, and no rain is predicted to wash off applications.', 'HIGH', 1, 'u-002'),
+('rule-004', 'crop-003', 'IRRIGATION_DEFICIT', 'Supplemental Irrigation: Flowering Moisture Stress Prevention', 'Flowering R1', 'Rain last 24h < 2mm and forecast rain 48h < 5mm during flowering', 18.0, 30.0, NULL, 5.0, NULL, NULL, 'Schedule 15mm supplemental drip or furrow irrigation to protect flowers from thermal abortion.', 'Crop is at sensitive flowering stage with insufficient soil moisture and negligible rain in the 48h forecast.', 'HIGH', 1, 'u-002'),
+('rule-005', 'crop-001', 'PRE_SEASON_CROP_SELECTION', 'Maize Seasonal Hydrothermal Suitability Matrix', 'Pre-Season Planning', 'Seasonal forecast precipitation 500-900mm with mean temp 18-28°C and soil pH 5.8-7.0', 18.0, 28.0, 500.0, 900.0, NULL, NULL, 'Recommend Highland Hybrid H614D for high rain forecast; recommend DK8031 if forecast drops below 450mm.', 'Hydrothermal index matches optimal grain filling requirements for East African highlands.', 'HIGH', 1, 'u-002')
+ON DUPLICATE KEY UPDATE `title` = VALUES(`title`);

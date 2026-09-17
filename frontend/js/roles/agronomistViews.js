@@ -886,12 +886,103 @@ export const agronomistViews = {
               Decision support synthesizing physiological crop stages, supporting microclimate conditions, and historical trial context.
             </p>
           </div>
-          <span class="badge badge-purple">${recs.length} Active Advisories</span>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary" id="btnOpenAddRuleModal">+ Author New Agronomic Rule</button>
+            <span class="badge badge-purple" style="align-self: center;">${recs.length} Active Advisories</span>
+          </div>
         </div>
       </div>
 
-      <!-- Recommendation Cards List -->
-      <div style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
+      <!-- AGRONOMIC RULES & BASELINE DATABASE (Who sets the recommendation criteria) -->
+      <div class="panel" style="padding: 22px; margin-bottom: 28px; border-top: 4px solid var(--primary-dark);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin: 0 0 4px 0;">
+              ⚙️ Agronomic Baseline Decision Rules Database
+            </h2>
+            <p style="font-size: 0.825rem; color: var(--text-muted); margin: 0;">
+              Authored by Agronomists (KALRO / Research Institutes). The system evaluates incoming weather forecasts against these rules to automatically advise farmers.
+            </p>
+          </div>
+          <span class="badge badge-green">5 Stored Scientific Rules</span>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Rule Name & Scenario</th>
+                <th>Target Crop & Stage</th>
+                <th>Weather Trigger Conditions</th>
+                <th>Automated Action Directive</th>
+                <th>Urgency</th>
+                <th>Author</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong style="color: var(--text-primary);">Top-Dress Nitrogen (CAN) Before Rain</strong><br>
+                  <span class="badge badge-amber" style="font-size: 0.7rem; margin-top: 3px;">FERTILIZER TIMING</span>
+                </td>
+                <td>Maize (H614D)<br><small style="color: var(--text-muted);">Vegetative V6</small></td>
+                <td><span style="color: var(--accent-blue); font-weight: 700;">Rain 8–30mm</span> in 48h forecast</td>
+                <td style="font-size: 0.8rem;">Apply CAN 50 kg/acre 5cm from stem before showers.</td>
+                <td><span class="badge badge-rose">HIGH</span></td>
+                <td><small style="color: var(--text-muted);">Dr. Sarah Mwangi (KALRO)</small></td>
+              </tr>
+              <tr>
+                <td>
+                  <strong style="color: var(--text-primary);">Optimal Spray Window Open</strong><br>
+                  <span class="badge badge-blue" style="font-size: 0.7rem; margin-top: 3px;">SPRAY WINDOW</span>
+                </td>
+                <td>Universal (All Crops)<br><small style="color: var(--text-muted);">Any Stage</small></td>
+                <td><span style="color: var(--primary-dark); font-weight: 700;">Wind &lt; 9 km/h</span>, Rain &lt; 5mm (24h)</td>
+                <td style="font-size: 0.8rem;">Spray before 10:30 AM to avoid chemical drift and wash-off.</td>
+                <td><span class="badge badge-rose">HIGH</span></td>
+                <td><small style="color: var(--text-muted);">Dr. Sarah Mwangi (KALRO)</small></td>
+              </tr>
+              <tr>
+                <td>
+                  <strong style="color: var(--text-primary);">Fungal Blight &amp; Rust Outbreak Warning</strong><br>
+                  <span class="badge badge-rose" style="font-size: 0.7rem; margin-top: 3px;">DISEASE RISK</span>
+                </td>
+                <td>Wheat / Dry Beans<br><small style="color: var(--text-muted);">Tillering / Flowering</small></td>
+                <td><span style="color: var(--accent-rose); font-weight: 700;">Humidity &gt; 72%</span>, Temp 15–23°C</td>
+                <td style="font-size: 0.8rem;">Inspect lower leaves; prepare prophylactic broad-spectrum spray.</td>
+                <td><span class="badge badge-rose">CRITICAL</span></td>
+                <td><small style="color: var(--text-muted);">Dr. Sarah Mwangi (KALRO)</small></td>
+              </tr>
+              <tr>
+                <td>
+                  <strong style="color: var(--text-primary);">Supplemental Irrigation Trigger</strong><br>
+                  <span class="badge badge-blue" style="font-size: 0.7rem; margin-top: 3px;">IRRIGATION DEFICIT</span>
+                </td>
+                <td>Dry Beans (Rosecoco)<br><small style="color: var(--text-muted);">Flowering R1</small></td>
+                <td><span style="color: var(--accent-amber); font-weight: 700;">Rain &lt; 2mm (24h)</span>, forecast &lt; 5mm</td>
+                <td style="font-size: 0.8rem;">Run 15mm supplemental drip irrigation to prevent flower drop.</td>
+                <td><span class="badge badge-rose">HIGH</span></td>
+                <td><small style="color: var(--text-muted);">Dr. Sarah Mwangi (KALRO)</small></td>
+              </tr>
+              <tr>
+                <td>
+                  <strong style="color: var(--text-primary);">Pre-Season Maize Hydrothermal Selection</strong><br>
+                  <span class="badge badge-green" style="font-size: 0.7rem; margin-top: 3px;">CROP SELECTION</span>
+                </td>
+                <td>Maize (Zea mays)<br><small style="color: var(--text-muted);">Pre-Season Planning</small></td>
+                <td><span style="color: var(--primary-dark); font-weight: 700;">Rain 500–900mm</span>, Temp 18–28°C</td>
+                <td style="font-size: 0.8rem;">Recommend Highland Hybrid H614D; divert to DK8031 if &lt;450mm.</td>
+                <td><span class="badge badge-amber">MEDIUM</span></td>
+                <td><small style="color: var(--text-muted);">Dr. Sarah Mwangi (KALRO)</small></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin: 0 0 14px 0;">
+        Active Farm-Level Agronomic Advisories
+      </h2>
         ${recs.map(r => `
           <div class="panel" style="padding: 24px; border-left: 5px solid ${r.urgency === 'HIGH' ? 'var(--accent-rose)' : 'var(--accent-blue)'};">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; margin-bottom: 14px;">
