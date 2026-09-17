@@ -81,6 +81,18 @@ public class Crop
     public string? PlantingSeason { get; set; }
 }
 
+public class CropVariety
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string CropId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public int MaturityDays { get; set; }
+    public string DroughtTolerance { get; set; } = "Medium";
+    public string? DiseaseResistance { get; set; }
+    public decimal YieldPotentialKgHa { get; set; }
+    public string? RecommendedRegions { get; set; }
+}
+
 public class CropCycle
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();

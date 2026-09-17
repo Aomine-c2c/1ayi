@@ -73,7 +73,25 @@ public class CropRepository
             FROM crop_cycles
             WHERE (@FieldId IS NULL OR field_id = @FieldId)
             ORDER BY start_date DESC;";
-
         return await conn.QueryAsync<CropCycle>(sql, new { FieldId = fieldId });
+    }
+
+    public async Task<IEnumerable<CropVariety>> GetVarietiesByCropIdAsync(string cropId)
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"
+            SELECT 
+                id AS Id,
+                crop_id AS CropId,
+                name AS Name,
+                maturity_days AS MaturityDays,
+                drought_tolerance AS DroughtTolerance,
+                disease_resistance AS DiseaseResistance,
+                yield_potential_kg_ha AS YieldPotentialKgHa,
+                recommended_regions AS RecommendedRegions
+            FROM crop_varieties
+            WHERE crop_id = @CropId;";
+
+        return await conn.QueryAsync<CropVariety>(sql, new { CropId = cropId });
     }
 }

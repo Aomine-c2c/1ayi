@@ -1062,6 +1062,31 @@ export const agronomistViews = {
         alert('Agronomic advisory signed and verified into the official crop management ledger.');
       });
     });
+
+    const btnAddRule = container.querySelector('#btnOpenAddRuleModal');
+    if (btnAddRule) {
+      btnAddRule.addEventListener('click', () => {
+        const title = prompt('Enter new Agronomic Rule Title (e.g., "Late Blight Prophylactic Spray Window"):');
+        if (!title) return;
+        const trigger = prompt('Enter weather trigger condition (e.g., "Humidity > 80% and Rain > 10mm"):');
+        const directive = prompt('Enter farming action directive (e.g., "Apply copper hydroxide fungicide to tomato canopy within 24h"):');
+        if (title && directive) {
+          recommendationService.addRule({
+            id: 'rule-' + Date.now(),
+            title,
+            ruleType: 'DISEASE_RISK',
+            triggerCondition: trigger || 'Weather threshold reached',
+            actionDirective: directive,
+            rationale: 'Authored by Senior Agronomist via Command Hub',
+            urgency: 'HIGH',
+            isActive: true,
+            authoredBy: 'Dr. Sarah Mwangi (KALRO)'
+          }).then(() => {
+            alert(`Agronomic Rule "${title}" successfully stored in database and active for automated farmer recommendations.`);
+          });
+        }
+      });
+    }
   },
 
   // =========================================================================

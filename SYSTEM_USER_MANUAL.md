@@ -192,12 +192,20 @@ AYIS provides 8 granular role profiles. Each persona has custom navigation, filt
 
 ### 3.4 Agronomist (`agronomist`)
 - **Persona:** Dr. Sarah Mwangi — Senior Crop Intelligence Specialist (KALRO).
-- **Core Purpose:** Defining biological crop parameters, calibrating yield models, and authoring research-backed advisory rules.
+- **Core Purpose:** Defining biological crop parameters, calibrating yield models, and authoring research-backed advisory rules in the database.
 - **Key Tasks:**
-  1. Maintain the master crop catalog (`crops`), defining thermal minimums, rainfall optimums, and growing days.
-  2. Create hybrid variety profiles (`crop_varieties`) with disease resistance and drought tolerance flags.
-  3. Calibrate multi-factor crop suitability algorithms for specific ecological zones.
-  4. Formulate agronomic recommendation templates triggered by microclimate stress events.
+  1. **Maintain the Master Crop & Variety Catalog (`crops`, `crop_varieties`)**:
+     - Defines biological baselines: growing days, optimal temperature bands ($18\text{--}30^\circ\text{C}$), rainfall minimums/optimums ($500\text{--}750\text{mm}$), and pH tolerances.
+     - Adds hybrid varieties with resilience profiles (e.g. drought-tolerant DK8031 vs highland hybrid H614D).
+  2. **Author the Agronomic Decision Rules Database (`agronomic_rules`)**:
+     - **Who sets the rules?** The Agronomist (Dr. Sarah Mwangi / KALRO agronomists) is the sole authority who defines what weather conditions trigger specific farming advice.
+     - **What does the database store?**
+       - **Pre-Season Selection Rules**: Weather criteria (e.g. *If forecast rainfall is 500–900mm and temperature 18–28°C $\to$ recommend Maize H614D*).
+       - **Daily Operational Rules**: Microclimate thresholds (e.g. *If humidity $>72\%$ at $15\text{--}23^\circ\text{C} \to$ trigger Yellow Rust warning*; *If wind $<9\text{ km/h} \to$ trigger Safe Spraying window*).
+  3. **Calibrate Soil Suitability Indices**:
+     - Adjusts weightings for soil pH, clay loam drainage, and elevation ranges.
+  4. **Verify and Sign Off on Scientific Advisories**:
+     - Approves and updates regional guidance templates before automated delivery to farmers.
 
 ### 3.5 Agricultural Extension Officer (`extension_officer`)
 - **Persona:** Regional Field Extension Agent working with agricultural cooperatives.
@@ -293,6 +301,7 @@ All spatial coordinates in AYIS use **WGS 84 (Spatial Reference System Identifie
 | `suitability_assessments`|`id` (VARCHAR 36)|`field_id`, `crop_id`, `suitability_score`, `limiting_factors` | Algorithmic suitability matching output. |
 | `yield_predictions`|`id` (VARCHAR 36)| `cycle_id`, `predicted_yield_kg_ha`, `confidence_score_pct`| Statistical harvest forecast with bounds. |
 | `recommendations` | `id` (VARCHAR 36) | `field_id`, `category`, `title`, `details`, `urgency` | Actionable agronomic instructions for operators. |
+| `agronomic_rules` | `id` (VARCHAR 36) | `crop_id`, `rule_type`, `trigger_condition`, `action_directive`, `min_temp_c`, `max_wind_kmh` | Decision criteria database authored by Agronomists to map weather patterns to farming advice. |
 | `notifications` | `id` (VARCHAR 36) | `user_id`, `title`, `type`, `is_read` | User-facing messaging inbox. |
 | `audit_logs` | `id` (BIGINT AUTO)| `user_id`, `action`, `resource_type`, `timestamp` | Tamper-evident compliance tracking. |
 
