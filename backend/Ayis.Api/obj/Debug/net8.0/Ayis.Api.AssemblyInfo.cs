@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Ayis.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b96151ebbc53e86bfd4edd61c6584eea8c4c3570")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5c065e4d34fbaffce5c31d7d0bbef68d178bd8bb")]
 [assembly: System.Reflection.AssemblyProductAttribute("Ayis.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Ayis.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

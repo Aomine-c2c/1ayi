@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\armut\\404\\ayi\\backend\\Ayis.Api\\Ayis.Api.csproj": {}
+    "/home/sila/Projects/ayi/backend/Ayis.Api/Ayis.Api.csproj": {}
   },
   "projects": {
-    "C:\\Users\\armut\\404\\ayi\\backend\\Ayis.Api\\Ayis.Api.csproj": {
+    "/home/sila/Projects/ayi/backend/Ayis.Api/Ayis.Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\armut\\404\\ayi\\backend\\Ayis.Api\\Ayis.Api.csproj",
+        "projectUniqueName": "/home/sila/Projects/ayi/backend/Ayis.Api/Ayis.Api.csproj",
         "projectName": "Ayis.Api",
-        "projectPath": "C:\\Users\\armut\\404\\ayi\\backend\\Ayis.Api\\Ayis.Api.csproj",
-        "packagesPath": "C:\\Users\\armut\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\armut\\404\\ayi\\backend\\Ayis.Api\\obj\\",
+        "projectPath": "/home/sila/Projects/ayi/backend/Ayis.Api/Ayis.Api.csproj",
+        "packagesPath": "/home/sila/.nuget/packages/",
+        "outputPath": "/home/sila/Projects/ayi/backend/Ayis.Api/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\armut\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/home/sila/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
@@ -96,15 +96,11 @@
               "version": "[8.0.31, 8.0.31]"
             },
             {
-              "name": "Microsoft.NETCore.App.Host.win-x64",
+              "name": "Microsoft.NETCore.App.Host.linux-x64",
               "version": "[8.0.31, 8.0.31]"
             },
             {
               "name": "Microsoft.NETCore.App.Ref",
-              "version": "[8.0.31, 8.0.31]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Ref",
               "version": "[8.0.31, 8.0.31]"
             }
           ],
@@ -116,7 +112,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/home/sila/.local/share/mise/dotnet-root/sdk/10.0.401/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
