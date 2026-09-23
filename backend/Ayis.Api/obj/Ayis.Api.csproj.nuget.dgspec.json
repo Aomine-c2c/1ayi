@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/home/sila/Projects/ayi/backend/Ayis.Api/Ayis.Api.csproj": {}
+    "/home/sila/Projects/1ayi/backend/Ayis.Api/Ayis.Api.csproj": {}
   },
   "projects": {
-    "/home/sila/Projects/ayi/backend/Ayis.Api/Ayis.Api.csproj": {
+    "/home/sila/Projects/1ayi/backend/Ayis.Api/Ayis.Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/sila/Projects/ayi/backend/Ayis.Api/Ayis.Api.csproj",
+        "projectUniqueName": "/home/sila/Projects/1ayi/backend/Ayis.Api/Ayis.Api.csproj",
         "projectName": "Ayis.Api",
-        "projectPath": "/home/sila/Projects/ayi/backend/Ayis.Api/Ayis.Api.csproj",
+        "projectPath": "/home/sila/Projects/1ayi/backend/Ayis.Api/Ayis.Api.csproj",
         "packagesPath": "/home/sila/.nuget/packages/",
-        "outputPath": "/home/sila/Projects/ayi/backend/Ayis.Api/obj/",
+        "outputPath": "/home/sila/Projects/1ayi/backend/Ayis.Api/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/home/sila/.nuget/NuGet/NuGet.Config"
@@ -24,7 +24,6 @@
         },
         "frameworks": {
           "net8.0": {
-            "framework": "net8.0",
             "targetAlias": "net8.0",
             "projectReferences": {}
           }
@@ -38,12 +37,10 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        },
-        "SdkAnalysisLevel": "10.0.400"
+        }
       },
       "frameworks": {
         "net8.0": {
-          "framework": "net8.0",
           "targetAlias": "net8.0",
           "dependencies": {
             "BCrypt.Net-Next": {
@@ -61,6 +58,10 @@
             "Microsoft.AspNetCore.OpenApi": {
               "target": "Package",
               "version": "[8.0.8, )"
+            },
+            "Microsoft.Data.Sqlite": {
+              "target": "Package",
+              "version": "[10.0.12, )"
             },
             "MySqlConnector": {
               "target": "Package",
@@ -90,20 +91,6 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[8.0.31, 8.0.31]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Host.linux-x64",
-              "version": "[8.0.31, 8.0.31]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[8.0.31, 8.0.31]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.AspNetCore.App": {
               "privateAssets": "none"
@@ -112,7 +99,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/home/sila/.local/share/mise/dotnet-root/sdk/10.0.401/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/home/sila/.dotnet/sdk/8.0.425/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

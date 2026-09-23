@@ -4,6 +4,11 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 API_DIR="$SCRIPT_DIR/backend/Ayis.Api"
 
+if [ -d "$HOME/.dotnet" ]; then
+    export DOTNET_ROOT="$HOME/.dotnet"
+    export PATH="$HOME/.dotnet:$PATH"
+fi
+
 echo "=========================================="
 echo "   Starting AYIS C# Backend (.NET)        "
 echo "=========================================="
@@ -44,4 +49,4 @@ dotnet restore
 echo "Launching AYIS Minimal API on http://localhost:$PORT..."
 echo "Swagger API spec available at: http://localhost:$PORT/swagger/v1/swagger.json"
 
-dotnet run
+dotnet run --no-build --urls "http://localhost:$PORT"

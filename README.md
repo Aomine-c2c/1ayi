@@ -3,13 +3,13 @@
 > **Precision Agriculture & Decision Support Platform**  
 > Built with a high-performance **C# ASP.NET Core Minimal API (.NET 8.0)** backend, **MySQL 8 with native GIS spatial engine**, and a responsive **Vanilla Web Frontend (HTML5, CSS3, ES6 JavaScript)** without bloated JavaScript framework runtimes.
 
-> **Comprehensive User Manual:** For persona breakdowns, operational workflows, and step-by-step role guides, consult the [System Architecture & User Manual](file:///home/sila/Projects/ayi/SYSTEM_USER_MANUAL.md).
+> **Comprehensive User Manual:** For persona breakdowns, operational workflows, and step-by-step role guides, consult the [System Architecture & User Manual](SYSTEM_USER_MANUAL.md).
 
 ---
 
 ## 📋 Table of Contents
 
-0. [Comprehensive User & Operational Manual](file:///home/sila/Projects/ayi/SYSTEM_USER_MANUAL.md)
+0. [Comprehensive User & Operational Manual](SYSTEM_USER_MANUAL.md)
 1. [System Overview](#-system-overview)
 2. [Architecture & Technology Stack](#-architecture--technology-stack)
 3. [Repository Layout](#-repository-layout)

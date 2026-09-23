@@ -1,7 +1,7 @@
 import { farmService, cropService, weatherService, recommendationService, yieldService, fieldOperationService, adminService, reportService, notificationService, authService } from './services/index.js';
 import { renderGisMap, renderWeatherChart } from './components/gisMap.js';
 import { showModal } from './components/modal.js';
-import { authViews } from './auth/authViews.js';
+import { authViews } from './auth/authViews.js?v=2';
 import { ui } from './components/ui.js';
 import { geoComponents } from './components/geoComponents.js';
 import { reportBuilderComponent } from './components/reportBuilder.js';
@@ -110,7 +110,7 @@ export const views = {
           </div>
           <div class="card-body">
             <div class="map-canvas-container">
-              <canvas id="dashboardGisMap"></canvas>
+              <div id="dashboardGisMap" style="height: 100%; min-height: 300px; width: 100%;"></div>
             </div>
           </div>
         </div>
@@ -119,7 +119,7 @@ export const views = {
           <div class="card-header">
             <div>
               <span class="card-title">Diurnal Temperature Trend</span>
-              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Nakuru Agromet [NKU-01]</p>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Harare Central [ZW-HRE] · Live AccuWeather</p>
             </div>
             <span class="badge badge-blue">Live Observations</span>
           </div>
@@ -136,13 +136,27 @@ export const views = {
       authViews.showFarmerOnboardingWizard(() => views.dashboard(container));
     });
 
-    setTimeout(() => {
-      renderGisMap('dashboardGisMap', farms);
+    setTimeout(async () => {
+      const { mapFactory } = await import('./geo/mapFactory.js');
+      const dashMap = mapFactory.create('dashboardGisMap', {
+        center: { lat: -19.0154, lon: 29.1549 },
+        zoom: 6,
+        interactive: true,
+        showFields: true
+      });
+      dashMap.setMarkers(farms.filter(f => f.latitude != null && f.longitude != null).map(f => ({
+        id: f.id,
+        lat: f.latitude,
+        lon: f.longitude,
+        title: f.name,
+        crop: f.primaryCrop,
+        color: '#059669'
+      })));
       renderWeatherChart('dashboardWeatherChart', weather);
     }, 50);
   },
 
-  // 2. Farms & Fields Geospatial Registry
+  // 2. Farms & Fields Geospatial Registry — with AccuWeather live weather per farm
   async farms(container) {
     const farms = await farmService.listFarms();
     container.innerHTML = `
@@ -152,43 +166,77 @@ export const views = {
         <div>
           <h1 style="font-size: 1.5rem; font-weight: 900; color: var(--text-primary);">Farm & Field Geospatial Registry</h1>
           <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 4px;">
-            Native MySQL 8 spatial POINT (Centroid) and POLYGON (Boundaries) with SRID 4326
+            Live AccuWeather conditions per farm · MySQL 8 spatial POINT (SRID 4326) · Click a farm pin for live weather
           </p>
         </div>
-        <button class="btn btn-primary" id="btnRegisterFarmPrompt">+ Register Farm</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-outline" id="btnRefreshWeather" title="Refresh AccuWeather data for all farms">🔄 Refresh Weather</button>
+          <button class="btn btn-primary" id="btnRegisterFarmPrompt">+ Register Farm (GPS)</button>
+        </div>
+      </div>
+
+      <!-- Interactive Farm Map with AccuWeather pins -->
+      <div class="panel" style="padding: 0; margin-bottom: 24px; overflow: hidden; border-radius: var(--radius);">
+        <div style="padding: 14px 20px; border-bottom: 1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <span style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">
+              🗺️ Zimbabwe Farm Network — Live AccuWeather Intelligence Map
+            </span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span id="weatherMapStatus" style="font-size:0.72rem;color:var(--text-muted);">Loading weather data...</span>
+            <div style="display:flex;gap:4px;align-items:center;font-size:0.68rem;color:var(--text-muted);">
+              <span style="background:#10b981;width:8px;height:8px;border-radius:50%;display:inline-block;"></span>&lt;22°C
+              <span style="background:#f59e0b;width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:4px;"></span>22-29°C
+              <span style="background:#f43f5e;width:8px;height:8px;border-radius:50%;display:inline-block;margin-left:4px;"></span>30°C+
+            </div>
+          </div>
+        </div>
+        <div id="farmsWeatherMapCanvas" style="height: 380px; position: relative;"></div>
       </div>
 
       ${ui.searchAndFilterBar({
         id: 'farmsFilterBar',
         placeholder: 'Search farms by name, region, or primary crop...',
         filters: [
-          { label: 'Region', key: 'region', options: ['Nakuru High Plains', 'Uasin Gishu Plateau', 'Rongai Valley'] },
-          { label: 'Soil Type', key: 'soil', options: ['Volcanic Loam', 'Clay Loam', 'Sandy Loam'] }
+          { label: 'Region', key: 'region', options: ['Mashonaland Central', 'Mashonaland East', 'Mashonaland West', 'Manicaland', 'Midlands', 'Masvingo', 'Matabeleland North', 'Matabeleland South'] },
+          { label: 'Soil Type', key: 'soil', options: ['Volcanic Loam', 'Clay Loam', 'Sandy Loam', 'Sandy Clay Loam', 'Vertisol'] }
         ]
       })}
 
       <div id="farmsGridContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px;">
         ${farms.map(f => `
-          <div class="panel farm-card" data-name="${f.name.toLowerCase()}" data-region="${f.region.toLowerCase()}" style="padding: 22px;">
+          <div class="panel farm-card" data-id="${f.id}" data-name="${f.name.toLowerCase()}" data-region="${(f.region || '').toLowerCase()}" style="padding: 22px; position: relative;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div>
                 <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">${f.name}</h3>
-                <span style="font-size: 0.8125rem; color: var(--primary-dark); font-weight: 700;">${f.region}</span>
+                <span style="font-size: 0.8125rem; color: var(--primary-dark); font-weight: 700;">${f.region || 'Zimbabwe'}</span>
               </div>
               <span class="badge badge-green">${f.sizeHa} Hectares</span>
             </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.82rem; color: var(--text-secondary); margin: 18px 0; background: var(--bg-primary); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+
+            <!-- Live AccuWeather strip (populated asynchronously) -->
+            <div id="weatherStrip_${f.id}" style="background: linear-gradient(135deg, #0f172a, #1e293b); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; display:flex; align-items:center; justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:28px;height:28px;border:2px solid rgba(255,255,255,0.1);border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+                <span style="font-size:0.75rem;color:#94a3b8;">Fetching AccuWeather...</span>
+              </div>
+              <span style="font-size:0.65rem;color:#475569;">📍 ${f.latitude != null ? `${f.latitude.toFixed(4)}, ${f.longitude.toFixed(4)}` : 'No GPS set'}</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.82rem; color: var(--text-secondary); margin: 0 0 18px; background: var(--bg-primary); padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
               <div><strong style="color: var(--text-muted);">Primary Crop:</strong> ${f.primaryCrop}</div>
               <div><strong style="color: var(--text-muted);">Soil Type:</strong> ${f.soilType}</div>
               <div><strong style="color: var(--text-muted);">Irrigation:</strong> ${f.irrigationType}</div>
-              <div><strong style="color: var(--text-muted);">Elevation:</strong> ${f.elevationM}m AMSL</div>
-              <div style="grid-column: span 2;"><strong style="color: var(--text-muted);">Centroid:</strong> POINT(${f.longitude} ${f.latitude})</div>
+              <div><strong style="color: var(--text-muted);">Elevation:</strong> ${f.elevationM != null ? f.elevationM + 'm' : 'N/A'}</div>
+              <div style="grid-column: span 2;"><strong style="color: var(--text-muted);">GPS:</strong>
+                ${f.latitude != null ? `<code>POINT(${f.longitude} ${f.latitude})</code>` : '<span style="color:#f59e0b;">⚠️ No coordinates set</span>'}
+              </div>
             </div>
 
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button class="btn btn-outline" style="flex: 1; font-size: 0.775rem;" id="btnFarmDetails_${f.id}">Farm Details</button>
-              <button class="btn btn-outline" style="flex: 1; font-size: 0.775rem;" id="btnFarmEdit_${f.id}">Edit Farm</button>
+              <button class="btn btn-outline" style="flex: 1; font-size: 0.775rem;" id="btnFarmWeather_${f.id}">🌤️ Full Weather</button>
               <button class="btn btn-primary" style="flex: 1; font-size: 0.775rem;" id="btnFarmMap_${f.id}">GIS Map</button>
             </div>
           </div>
@@ -198,7 +246,155 @@ export const views = {
       ${ui.pagination({ current: 1, totalPages: 1 })}
     `;
 
-    // Bind interactive modals for farm details, edit, map
+    // ── Initialize canvas map with farm markers ──────────────────────────────
+    let farmMap = null;
+    try {
+      const { mapFactory } = await import('./geo/mapFactory.js');
+      farmMap = mapFactory.create('farmsWeatherMapCanvas', {
+        center: { lat: -19.0154, lon: 29.1549 },
+        zoom: 7,
+        interactive: true,
+        showFields: false
+      });
+
+      // Add farm markers
+      if (farms.length > 0) {
+        farmMap.addMarkers(farms.filter(f => f.latitude != null && f.longitude != null).map(f => ({
+          id: f.id,
+          lat: f.latitude,
+          lon: f.longitude,
+          title: f.name,
+          crop: f.primaryCrop,
+          color: '#059669'
+        })));
+      }
+    } catch (e) {
+      console.warn('[farmsView] Map initialization failed:', e);
+    }
+
+    // ── Fetch AccuWeather data per farm & update strips + map pins ───────────
+    const loadWeatherForFarms = async () => {
+      const statusEl = container.querySelector('#weatherMapStatus');
+      if (statusEl) statusEl.textContent = 'Fetching AccuWeather data...';
+
+      const weatherPromises = farms.map(async (f) => {
+        try {
+          const bundle = await weatherService.getWeatherForFarm(f);
+          _updateFarmWeatherStrip(container, f, bundle);
+          if (farmMap && f.latitude != null) {
+            farmMap.addWeatherPin(f.id, bundle);
+          }
+          return bundle;
+        } catch (e) {
+          _setFarmWeatherStripError(container, f, 'Weather unavailable');
+          return null;
+        }
+      });
+
+      await Promise.allSettled(weatherPromises);
+      if (statusEl) statusEl.textContent = `Live AccuWeather · Updated ${new Date().toLocaleTimeString()}`;
+    };
+
+    // Start loading weather (non-blocking)
+    loadWeatherForFarms();
+
+    // ── Refresh button ────────────────────────────────────────────────────────
+    container.querySelector('#btnRefreshWeather')?.addEventListener('click', () => {
+      // Reset strips to loading state
+      farms.forEach(f => {
+        const strip = container.querySelector(`#weatherStrip_${f.id}`);
+        if (strip) {
+          strip.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:20px;height:20px;border:2px solid rgba(255,255,255,0.1);border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+              <span style="font-size:0.72rem;color:#94a3b8;">Refreshing...</span>
+            </div>`;
+        }
+      });
+      loadWeatherForFarms();
+    });
+
+    // ── Full Weather modal per farm ───────────────────────────────────────────
+    farms.forEach(f => {
+      container.querySelector(`#btnFarmWeather_${f.id}`)?.addEventListener('click', async () => {
+        const modal = showModal({
+          title: `🌤️ Live Weather — ${f.name}`,
+          contentHtml: `
+            <div style="text-align:center;padding:24px;">
+              <div style="width:32px;height:32px;border:3px solid rgba(0,0,0,0.1);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;"></div>
+              <span style="color:var(--text-muted);font-size:0.875rem;">Fetching live AccuWeather data for ${f.name}...</span>
+            </div>`,
+          confirmText: 'Close'
+        });
+
+        try {
+          const bundle = await weatherService.getWeatherForFarm(f);
+          const cc = bundle.current;
+          const days = bundle.forecast?.days ?? [];
+          const alerts = bundle.alerts ?? [];
+
+          const temp = cc?.temperature?.value != null ? `${Math.round(cc.temperature.value)}°C` : 'N/A';
+          const feelsLike = cc?.realFeelTemperature?.value != null ? ` (Feels ${Math.round(cc.realFeelTemperature.value)}°C)` : '';
+          const humid = cc?.relativeHumidity != null ? `${cc.relativeHumidity}%` : 'N/A';
+          const wind = cc?.wind?.speed != null ? `${Math.round(cc.wind.speed)} km/h ${cc.wind.direction ?? ''}` : 'N/A';
+          const rain24h = cc?.precipitationLast24hMm != null ? `${cc.precipitationLast24hMm.toFixed(1)} mm` : 'N/A';
+          const cond = cc?.weatherText ?? 'N/A';
+          const pressure = cc?.pressureHpa != null ? `${cc.pressureHpa.toFixed(0)} hPa` : 'N/A';
+          const uv = cc?.uvIndex != null ? `${cc.uvIndex} (${cc.uvIndexText ?? ''})` : 'N/A';
+          const visibility = cc?.visibility != null ? `${cc.visibility} km` : 'N/A';
+          const cloud = cc?.cloudCoverPct != null ? `${cc.cloudCoverPct}%` : 'N/A';
+          const isDayTime = cc?.isDayTime !== false;
+          const tempColor = (cc?.temperature?.value ?? 20) >= 30 ? '#f43f5e' : (cc?.temperature?.value ?? 20) >= 22 ? '#f59e0b' : '#10b981';
+
+          const alertHtml = alerts.length > 0 ? `
+            <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:12px;margin-bottom:16px;">
+              <strong style="color:#92400e;">⚠️ ${alerts.length} Active Weather Alert${alerts.length > 1 ? 's' : ''}</strong>
+              ${alerts.slice(0, 2).map(a => `<div style="font-size:0.78rem;color:#78350f;margin-top:4px;">• ${a.description ?? a.category}</div>`).join('')}
+            </div>` : '';
+
+          const forecastHtml = days.length > 0 ? days.slice(0, 5).map(d => {
+            const dateLabel = new Date(d.date).toLocaleDateString('en-ZW', { weekday: 'short', month: 'short', day: 'numeric' });
+            return `
+              <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;padding:10px;text-align:center;min-width:100px;">
+                <div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:4px;">${dateLabel}</div>
+                <div style="font-size:1.4rem;">${_getForecastEmoji(d.icon)}</div>
+                <div style="font-size:0.85rem;font-weight:700;color:var(--text-primary);">${d.tempMax}° / ${d.tempMin}°</div>
+                <div style="font-size:0.68rem;color:#3b82f6;">${d.rainProbability}% 🌧</div>
+                <div style="font-size:0.65rem;color:var(--text-muted);margin-top:3px;">${d.condition}</div>
+              </div>`;
+          }).join('') : '<div style="color:var(--text-muted);font-size:0.8rem;">Forecast unavailable</div>';
+
+          const bodyEl = document.querySelector('.modal-content');
+          if (bodyEl) bodyEl.innerHTML = `
+            ${alertHtml}
+            <div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:20px;padding:16px;background:linear-gradient(135deg,${tempColor}15,transparent);border-radius:8px;border:1px solid ${tempColor}30;">
+              <div>
+                <div style="font-size:3rem;font-weight:900;color:${tempColor};line-height:1;">${temp}</div>
+                <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:2px;">${feelsLike}</div>
+                <div style="font-size:0.9rem;color:var(--text-primary);margin-top:4px;">${isDayTime ? '☀️' : '🌙'} ${cond}</div>
+              </div>
+              <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.78rem;">
+                <div><span style="color:var(--text-muted);">💧 Humidity:</span> <strong>${humid}</strong></div>
+                <div><span style="color:var(--text-muted);">💨 Wind:</span> <strong>${wind}</strong></div>
+                <div><span style="color:var(--text-muted);">🌧 Rain 24h:</span> <strong>${rain24h}</strong></div>
+                <div><span style="color:var(--text-muted);">☀️ UV:</span> <strong>${uv}</strong></div>
+                <div><span style="color:var(--text-muted);">📊 Pressure:</span> <strong>${pressure}</strong></div>
+                <div><span style="color:var(--text-muted);">👁️ Visibility:</span> <strong>${visibility}</strong></div>
+                <div><span style="color:var(--text-muted);">☁️ Cloud Cover:</span> <strong>${cloud}</strong></div>
+                <div><span style="color:var(--text-muted);">📍 GPS:</span> <strong>${f.latitude != null ? `${f.latitude.toFixed(4)}, ${f.longitude.toFixed(4)}` : 'N/A'}</strong></div>
+              </div>
+            </div>
+            <div style="margin-bottom:8px;font-size:0.75rem;font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.5px;">5-Day Forecast</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">${forecastHtml}</div>
+            <div style="font-size:0.65rem;color:var(--text-muted);text-align:right;">Source: AccuWeather · Cached 30 min · ${new Date().toLocaleTimeString()}</div>
+          `;
+        } catch (err) {
+          console.error('[farmsView] Full weather modal error:', err);
+        }
+      });
+    });
+
+    // ── Farm Details modals ───────────────────────────────────────────────────
     farms.forEach(f => {
       container.querySelector(`#btnFarmDetails_${f.id}`)?.addEventListener('click', () => {
         showModal({
@@ -206,54 +402,25 @@ export const views = {
           contentHtml: `
             <div style="font-size: 0.875rem;">
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; background: var(--bg-primary); padding: 12px; border-radius: var(--radius-xs);">
-                <div>Region: <strong>${f.region}</strong></div>
+                <div>Region: <strong>${f.region || 'Zimbabwe'}</strong></div>
                 <div>Size: <strong>${f.sizeHa} Hectares</strong></div>
                 <div>Primary Crop: <strong>${f.primaryCrop}</strong></div>
                 <div>Soil Type: <strong>${f.soilType}</strong></div>
                 <div>Irrigation: <strong>${f.irrigationType}</strong></div>
-                <div>Elevation: <strong>${f.elevationM}m AMSL</strong></div>
-                <div style="grid-column: span 2;">Centroid: <code>POINT(${f.longitude} ${f.latitude})</code></div>
+                <div>Elevation: <strong>${f.elevationM != null ? f.elevationM + 'm AMSL' : 'N/A'}</strong></div>
+                <div style="grid-column: span 2;">GPS Centroid: <code>${f.latitude != null ? `POINT(${f.longitude} ${f.latitude})` : 'Not set'}</code></div>
               </div>
-              <p style="color: var(--text-secondary); line-height: 1.5;">${f.description || 'Active smallholder model farm verified under KALRO agronomical standards.'}</p>
+              <p style="color: var(--text-secondary); line-height: 1.5;">${f.description || 'Active commercial farm registered under the AYIS Zimbabwe Agricultural Intelligence System.'}</p>
             </div>
           `,
           confirmText: 'Done'
         });
       });
 
-      container.querySelector(`#btnFarmEdit_${f.id}`)?.addEventListener('click', () => {
-        showModal({
-          title: `Edit Farm: ${f.name}`,
-          contentHtml: `
-            <div class="form-group">
-              <label class="form-label">Farm Holding Name</label>
-              <input class="form-input" id="inpEditFarmName" value="${f.name}">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Primary Crop</label>
-              <input class="form-input" id="inpEditFarmCrop" value="${f.primaryCrop}">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Soil Classification</label>
-              <input class="form-input" id="inpEditFarmSoil" value="${f.soilType}">
-            </div>
-            <div class="form-group">
-              <label class="form-label">Irrigation System</label>
-              <input class="form-input" id="inpEditFarmIrr" value="${f.irrigationType}">
-            </div>
-          `,
-          confirmText: 'Save Changes',
-          onConfirm: () => {
-            alert(`Farm parcel ${f.name} updated successfully in MySQL spatial store.`);
-          }
-        });
-      });
-
       container.querySelector(`#btnFarmMap_${f.id}`)?.addEventListener('click', () => {
-        // Find matching or fallback Zimbabwean farm data or adapt f
         const matchedZimFarm = ZIM_FARMS.find(zf => zf.id === f.id) || {
           ...f,
-          riskStatus: f.riskStatus || 'OPTIMAL',
+          riskStatus: 'OPTIMAL',
           suitabilityScore: 90,
           suitabilityClass: 'Highly Suitable (S1)',
           weatherAlert: null,
@@ -267,23 +434,117 @@ export const views = {
       });
     });
 
-    container.querySelector('#btnRegisterFarmPrompt')?.addEventListener('click', () => {
-      authViews.showFarmerOnboardingWizard(() => views.farms(container));
+    // ── Register Farm with GPS ────────────────────────────────────────────────
+    container.querySelector('#btnRegisterFarmPrompt')?.addEventListener('click', async () => {
+      const { getCurrentPosition, formatCoordinates, describeAccuracy } = await import('./services/geolocationService.js');
+
+      showModal({
+        title: '📍 Register Farm with GPS Location',
+        contentHtml: `
+          <div style="font-size:0.875rem;">
+            <div id="gpsStatus" style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;padding:14px;margin-bottom:16px;text-align:center;">
+              <button class="btn btn-primary" id="btnGetGPS" style="width:100%;">📍 Get My Current GPS Location</button>
+              <div id="gpsResult" style="margin-top:10px;font-size:0.8rem;color:var(--text-muted);"></div>
+            </div>
+            <input type="hidden" id="regFarmLat" value="">
+            <input type="hidden" id="regFarmLon" value="">
+            <div class="form-group">
+              <label class="form-label">Farm Name *</label>
+              <input class="form-input" id="regFarmName" placeholder="e.g. Mashonaland Highveld Estate">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Primary Crop *</label>
+              <input class="form-input" id="regFarmCrop" placeholder="e.g. White Maize (SC719)">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="form-group">
+                <label class="form-label">Size (Hectares)</label>
+                <input class="form-input" id="regFarmSize" type="number" min="0.1" placeholder="12.5">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Elevation (m AMSL)</label>
+                <input class="form-input" id="regFarmElev" type="number" placeholder="1250">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Soil Classification</label>
+              <select class="form-input" id="regFarmSoil">
+                <option>Sandy Clay Loam (Fersiallitic)</option>
+                <option>Vertisol (Black clay)</option>
+                <option>Volcanic Loam</option>
+                <option>Granitic Sandy Loam</option>
+                <option>Alluvial Loam</option>
+              </select>
+            </div>
+          </div>
+        `,
+        confirmText: 'Register Farm',
+        onConfirm: async () => {
+          const lat = parseFloat(document.querySelector('#regFarmLat')?.value) || -17.8252;
+          const lon = parseFloat(document.querySelector('#regFarmLon')?.value) || 31.0335;
+          const name = document.querySelector('#regFarmName')?.value?.trim();
+          const primaryCrop = document.querySelector('#regFarmCrop')?.value?.trim() || 'White Maize (SC719)';
+          const sizeHa = parseFloat(document.querySelector('#regFarmSize')?.value) || 12.5;
+          const elevationM = parseInt(document.querySelector('#regFarmElev')?.value) || 1250;
+          const soilType = document.querySelector('#regFarmSoil')?.value || 'Sandy Clay Loam (Fersiallitic)';
+
+          if (!name) {
+            showModal({ title: 'Validation Notice', contentHtml: '<p>Farm name is required.</p>', confirmText: 'OK' });
+            return;
+          }
+
+          await farmService.createFarm({
+            name,
+            primaryCrop,
+            sizeHa,
+            latitude: lat,
+            longitude: lon,
+            elevationM,
+            soilType,
+            region: 'Natural Region II (Highveld)'
+          });
+
+          views.farms(container);
+        }
+      });
+
+      // Wire up GPS button after modal renders
+      setTimeout(() => {
+        document.querySelector('#btnGetGPS')?.addEventListener('click', async () => {
+          const btn = document.querySelector('#btnGetGPS');
+          const resultEl = document.querySelector('#gpsResult');
+          if (btn) { btn.textContent = '⏳ Acquiring GPS...'; btn.disabled = true; }
+          try {
+            const pos = await getCurrentPosition();
+            if (document.querySelector('#regFarmLat')) document.querySelector('#regFarmLat').value = pos.lat;
+            if (document.querySelector('#regFarmLon')) document.querySelector('#regFarmLon').value = pos.lon;
+            if (resultEl) resultEl.innerHTML = `
+              <span style="color:#10b981;font-weight:700;">✅ Location acquired!</span><br>
+              📍 ${formatCoordinates(pos.lat, pos.lon)}<br>
+              <span style="color:var(--text-muted);">Accuracy: ${describeAccuracy(pos.accuracy)} (±${pos.accuracy}m)</span>
+            `;
+            if (btn) { btn.textContent = '✅ GPS Location Set'; btn.style.background = '#10b981'; }
+          } catch (err) {
+            if (resultEl) resultEl.innerHTML = `<span style="color:#f43f5e;">❌ ${err.message}</span>`;
+            if (btn) { btn.textContent = '📍 Get My Current GPS Location'; btn.disabled = false; }
+          }
+        });
+      }, 100);
     });
 
-    // Wire up search & filters
+    // ── Search & filter ───────────────────────────────────────────────────────
     const searchInput = container.querySelector('#farmsFilterBar .search-input');
     const cards = container.querySelectorAll('.farm-card');
     searchInput?.addEventListener('input', (e) => {
       const q = e.target.value.toLowerCase().trim();
       cards.forEach(card => {
-        const text = card.textContent.toLowerCase();
-        card.style.display = text.includes(q) ? 'block' : 'none';
+        card.style.display = card.textContent.toLowerCase().includes(q) ? 'block' : 'none';
       });
     });
   },
 
   // 3. Crops & FAO Agronomic Database
+
   async crops(container) {
     const crops = await cropService.listCrops();
     container.innerHTML = `
@@ -318,13 +579,17 @@ export const views = {
           </thead>
           <tbody>
             ${crops.map(c => `
-              <tr>
+              <tr class="crop-row">
                 <td><strong style="color: var(--text-primary); font-size: 0.9rem;">${c.name}</strong></td>
                 <td><span class="badge badge-blue">${c.category}</span></td>
                 <td>${c.temp}</td>
                 <td>${c.days} Days</td>
                 <td><strong style="color: var(--primary-dark);">${c.typicalYield}</strong></td>
-                <td><button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="location.hash='#intelligence'">View Agronomic Spec</button></td>
+                <td>
+                  <button class="btn btn-outline btn-view-crop-spec" data-id="${c.id}" data-name="${c.name}" style="padding: 4px 10px; font-size: 0.75rem;">
+                    🔍 Agronomic Spec
+                  </button>
+                </td>
               </tr>
             `).join('')}
           </tbody>
@@ -342,11 +607,67 @@ export const views = {
         row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
       });
     });
+
+    // Agronomic Spec Modal
+    container.querySelectorAll('.btn-view-crop-spec').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cropName = btn.getAttribute('data-name');
+        const crop = crops.find(c => c.name === cropName) || crops[0];
+
+        showModal({
+          title: `FAO Agronomic Spec: ${crop.name}`,
+          maxWidth: '640px',
+          confirmText: 'Done',
+          contentHtml: `
+            <div style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 14px;">
+              <div style="background: var(--bg-primary); padding: 14px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary);">${crop.name}</h3>
+                  <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Category: <strong>${crop.category}</strong></div>
+                </div>
+                <span class="badge badge-green" style="font-size: 0.75rem;">FAO ECOCROP VERIFIED</span>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div style="border: 1px solid var(--border-color); border-radius: var(--radius-xs); padding: 12px;">
+                  <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">🌡️ Thermal Thresholds</strong>
+                  <div>Optimal Temp: <strong>${crop.temp}</strong></div>
+                  <div>Base Cardinal Temp: <strong>10.0 °C</strong></div>
+                  <div>Maximum Heat Stress: <strong>36.0 °C</strong></div>
+                </div>
+                <div style="border: 1px solid var(--border-color); border-radius: var(--radius-xs); padding: 12px;">
+                  <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">💧 Hydrological Window</strong>
+                  <div>Precipitation Band: <strong>550 - 900 mm</strong></div>
+                  <div>Drought Sensitivity: <strong>Moderate (Flowering sensitive)</strong></div>
+                  <div>Irrigation Response: <strong>High Yield Elasticity</strong></div>
+                </div>
+              </div>
+
+              <div style="border: 1px solid var(--border-color); border-radius: var(--radius-xs); padding: 12px;">
+                <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">🧪 Soil & Nutrient Preferences</strong>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                  <div>pH Buffer: <strong>5.8 – 6.8 (Optimal)</strong></div>
+                  <div>Drainage: <strong>Well-drained Loam / Volcanic</strong></div>
+                  <div>Growing Period: <strong>${crop.days} Days to Maturity</strong></div>
+                  <div>Target Yield: <strong>${crop.typicalYield}</strong></div>
+                </div>
+              </div>
+
+              <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-outline" onclick="location.hash='#intelligence'">Assess Field Suitability →</button>
+              </div>
+            </div>
+          `
+        });
+      });
+    });
   },
 
   // 4. Crop Phenological Cycles
   async cycles(container) {
     const cycles = await cropService.listCycles();
+    const farms = await farmService.listFarms();
+
     container.innerHTML = `
       ${ui.breadcrumbs([{ label: 'Platform Hub', hash: '#dashboard' }, { label: 'Crop Phenological Cycles' }])}
 
@@ -376,11 +697,15 @@ export const views = {
             ${cycles.map(c => `
               <tr>
                 <td><strong>${c.farm}</strong><br><small style="color: var(--text-muted);">${c.field}</small></td>
-                <td><strong>${c.crop}</strong></td>
+                <td><strong>${c.crop}</strong><br><small style="color: var(--text-muted);">${c.variety || 'Commercial'}</small></td>
                 <td><span class="badge badge-blue">${c.stage}</span></td>
                 <td><strong style="color: var(--text-primary);">${c.targetYield}</strong></td>
                 <td>${ui.statusIndicator(c.status)}</td>
-                <td><button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="location.hash='#intelligence'">Assess Suitability</button></td>
+                <td>
+                  <div style="display: flex; gap: 6px;">
+                    <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="location.hash='#intelligence'">Suitability</button>
+                  </div>
+                </td>
               </tr>
             `).join('')}
           </tbody>
@@ -390,27 +715,52 @@ export const views = {
 
     container.querySelector('#btnNewCycleModal')?.addEventListener('click', () => {
       showModal({
-        title: 'Plan New Crop Cycle',
-        confirmText: 'Register Cycle',
+        title: 'Plan New Crop Phenological Cycle',
+        confirmText: 'Register & Launch Cycle',
+        maxWidth: '520px',
         contentHtml: `
-          <div class="form-group">
-            <label class="form-label">Select Target Farm</label>
-            <select class="form-input">
-              <option>Green Valley Model Farm</option>
-              <option>Rongai Sunrise Farm</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Crop & Variety</label>
-            <input class="form-input" value="Highland Hybrid Maize (H614D)">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Target Yield (MT/ha)</label>
-            <input class="form-input" type="number" step="0.1" value="5.8">
+          <div style="display: flex; flex-direction: column; gap: 14px; font-size: 0.85rem;">
+            <div class="form-group">
+              <label class="form-label">Select Target Farm</label>
+              <select class="form-input" name="farm">
+                ${farms.map(f => `<option value="${f.name}">${f.name} (${f.region})</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Field / Parcel Designation</label>
+              <input class="form-input" name="field" value="North Cadastral Parcel 1" required>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label class="form-label">Crop Cultivar</label>
+                <input class="form-input" name="crop" value="White Maize (SC719)" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Target Yield (MT/ha)</label>
+                <input class="form-input" name="targetYield" type="number" step="0.1" value="6.5" required>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="form-group">
+                <label class="form-label">Start / Planting Date</label>
+                <input class="form-input" name="startDate" type="date" value="${new Date().toISOString().split('T')[0]}" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Hectares Under Cultivation</label>
+                <input class="form-input" name="areaHa" type="number" step="0.1" value="5.0" required>
+              </div>
+            </div>
           </div>
         `,
-        onConfirm: () => {
-          alert('Crop cycle planned and initialized in MySQL 8.');
+        onConfirm: async (formData) => {
+          await cropService.createCycle({
+            farm: formData.farm,
+            field: formData.field,
+            crop: formData.crop,
+            targetYield: `${formData.targetYield} t/ha`,
+            startDate: formData.startDate,
+            areaHa: formData.areaHa
+          });
           views.cycles(container);
         }
       });
@@ -442,7 +792,7 @@ export const views = {
 
       <div class="panel" style="padding: 24px; margin-bottom: 24px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="font-size: 1.1rem; font-weight: 800;">Nakuru Agromet [NKU-01] 24h Diurnal Curve</h3>
+          <h3 style="font-size: 1.1rem; font-weight: 800;">Harare Central [ZW-HRE] 24h Diurnal Curve</h3>
           <span class="badge badge-green">Live Sensor Telemetry</span>
         </div>
         <div class="chart-canvas-container" style="height: 320px;">
@@ -453,16 +803,22 @@ export const views = {
       <!-- 5-Day Agricultural Forecast Grid -->
       <div class="panel" style="padding: 24px; margin-bottom: 24px;">
         <h3 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 16px;">5-Day Agricultural Forecast & Spraying Windows</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;">
-          ${forecasts.map(f => `
-            <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; text-align: center;">
-              <div style="font-weight: 800; font-size: 0.85rem; color: var(--text-muted);">${f.date}</div>
-              <div style="font-size: 1.5rem; font-weight: 900; color: var(--text-primary); margin: 6px 0;">${f.tempMax}° / ${f.tempMin}°</div>
-              <div style="font-size: 0.8rem; color: var(--accent-blue); font-weight: 700;">💧 ${f.rainMm} mm (${f.rainProbability}%)</div>
-              <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">${f.condition}</div>
-            </div>
-          `).join('')}
-        </div>
+        ${(Array.isArray(forecasts) ? forecasts : (forecasts?.days ?? [])).length > 0 ? `
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;">
+            ${(Array.isArray(forecasts) ? forecasts : (forecasts?.days ?? [])).map(f => `
+              <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; text-align: center;">
+                <div style="font-weight: 800; font-size: 0.85rem; color: var(--text-muted);">${f.date}</div>
+                <div style="font-size: 1.5rem; font-weight: 900; color: var(--text-primary); margin: 6px 0;">${f.tempMax}° / ${f.tempMin}°</div>
+                <div style="font-size: 0.8rem; color: var(--accent-blue); font-weight: 700;">💧 ${f.rainMm} mm (${f.rainProbability}%)</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">${f.condition}</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : `
+          <div style="color: var(--text-muted); font-size: 0.875rem;">
+            ${forecasts?.headline || 'No 5-day forecast data currently available.'}
+          </div>
+        `}
       </div>
 
       <div class="panel">
@@ -734,9 +1090,15 @@ export const views = {
                 <td><strong>${r.title}</strong></td>
                 <td><span class="badge badge-green">${r.category}</span></td>
                 <td>${r.region}</td>
-                <td>${r.format}</td>
+                <td><span class="badge badge-blue">${r.format}</span></td>
                 <td>${r.date}</td>
-                <td><button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="alert('Downloading ${r.title}...')">Download</button></td>
+                <td>
+                  <div style="display: flex; gap: 6px;">
+                    <button class="btn btn-outline btn-download-report" data-id="${r.id}" data-title="${r.title}" data-format="${r.format}" style="padding: 4px 10px; font-size: 0.75rem;">
+                      📥 Download
+                    </button>
+                  </div>
+                </td>
               </tr>
             `).join('')}
           </tbody>
@@ -744,26 +1106,106 @@ export const views = {
       </div>
     `;
 
+    // Trigger file download helper
+    const triggerDownload = (filename, content, mimeType) => {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+
+    container.querySelectorAll('.btn-download-report').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const title = btn.getAttribute('data-title');
+        const format = btn.getAttribute('data-format') || 'CSV';
+
+        if (format.includes('PDF')) {
+          showModal({
+            title: `Report Export: ${title}`,
+            maxWidth: '600px',
+            confirmText: 'Print / Save as PDF',
+            contentHtml: `
+              <div style="font-size: 0.85rem; padding: 6px 0;">
+                <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px;">
+                  <strong style="color: var(--text-primary); font-size: 0.95rem;">${title}</strong>
+                  <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 2px;">
+                    Generated: ${new Date().toLocaleDateString()} · Format: High-Resolution Vector PDF
+                  </div>
+                </div>
+                <p style="color: var(--text-secondary); line-height: 1.5;">
+                  Your seasonal report is formatted with high-contrast data charts, agro-ecological suitability scores, and spatial boundary coordinates. Click below to launch direct browser print or save to PDF.
+                </p>
+              </div>
+            `,
+            onConfirm: () => {
+              window.print();
+            }
+          });
+        } else if (format.includes('GeoJSON')) {
+          const geoJsonData = {
+            type: 'FeatureCollection',
+            metadata: { title, id, datum: 'WGS84 EPSG:4326', generated: new Date().toISOString() },
+            features: [
+              {
+                type: 'Feature',
+                properties: { name: 'Parcel A', crop: 'Maize', suitability: 'Highly Suitable (S1)', score: 92 },
+                geometry: { type: 'Polygon', coordinates: [[[31.02, -17.82], [31.05, -17.82], [31.05, -17.85], [31.02, -17.85], [31.02, -17.82]]] }
+              }
+            ]
+          };
+          triggerDownload(`${id}_spatial_boundaries.geojson`, JSON.stringify(geoJsonData, null, 2), 'application/geo+json');
+        } else {
+          // CSV Export
+          const csvContent = [
+            'ReportID,Title,Category,CoverageRegion,Metric,Value,Unit,Timestamp',
+            `"${id}","${title}","Yield & Agromet","Highveld Region","Mean Biomass",5800,"kg/ha","${new Date().toISOString()}"`,
+            `"${id}","${title}","Yield & Agromet","Highveld Region","Rainfall Anomaly",-12.4,"mm","${new Date().toISOString()}"`,
+            `"${id}","${title}","Yield & Agromet","Highveld Region","GDD Accumulation",1420,"deg-days","${new Date().toISOString()}"`
+          ].join('\n');
+          triggerDownload(`${id}_telemetry_log.csv`, csvContent, 'text/csv');
+        }
+      });
+    });
+
     container.querySelector('#btnExportReport')?.addEventListener('click', () => {
       showModal({
         title: 'Generate Agromet / Yield Report',
         confirmText: 'Generate & Download',
+        maxWidth: '520px',
         contentHtml: `
-          <div class="form-group">
-            <label class="form-label">Report Type</label>
-            <select class="form-input">
-              <option>Seasonal Harvest & Yield Forecast (PDF)</option>
-              <option>Agromet Diurnal Climate Log (CSV)</option>
-              <option>Geospatial Parcel Boundaries (GeoJSON)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Target Region</label>
-            <input class="form-input" value="Nakuru High Plains">
+          <div style="display: flex; flex-direction: column; gap: 14px; font-size: 0.85rem;">
+            <div class="form-group">
+              <label class="form-label">Report Type</label>
+              <select class="form-input" name="reportType">
+                <option value="CSV">Agromet Diurnal Climate Log (CSV)</option>
+                <option value="GeoJSON">Geospatial Parcel Boundaries (GeoJSON)</option>
+                <option value="PDF">Seasonal Harvest & Yield Forecast (PDF)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Target Agro-Ecological Region</label>
+              <input class="form-input" name="region" value="Natural Region II (Highveld)" required>
+            </div>
           </div>
         `,
-        onConfirm: () => {
-          alert('Report generated and queued for download.');
+        onConfirm: (formData) => {
+          const repType = formData.reportType || 'CSV';
+          const reg = formData.region || 'Highveld';
+          if (repType === 'CSV') {
+            const csv = `Region,Timestamp,Observation,TempC,RainMm\n"${reg}","${new Date().toISOString()}","Live Synoptic",22.5,4.2`;
+            triggerDownload(`custom_report_${Date.now()}.csv`, csv, 'text/csv');
+          } else if (repType === 'GeoJSON') {
+            const geo = { type: 'FeatureCollection', region: reg, features: [] };
+            triggerDownload(`custom_spatial_${Date.now()}.geojson`, JSON.stringify(geo), 'application/geo+json');
+          } else {
+            window.print();
+          }
         }
       });
     });
@@ -790,15 +1232,16 @@ export const views = {
       ${ui.searchAndFilterBar({
         id: 'farmersSearch',
         placeholder: 'Search farmer by name, phone, or email...',
-        filters: [{ label: 'Status', options: ['ACTIVE', 'PENDING_VERIFICATION'] }]
+        filters: [{ label: 'Status', options: ['ACTIVE', 'INACTIVE'] }]
       })}
 
       <div class="panel">
-        <table class="data-table">
+        <table class="data-table" id="farmersTable">
           <thead>
             <tr>
               <th>Farmer Name</th>
-              <th>Contact Email</th>
+              <th>Contact Phone / Email</th>
+              <th>Department / Ward</th>
               <th>Assigned Role</th>
               <th>Status</th>
               <th>Last Active</th>
@@ -807,14 +1250,31 @@ export const views = {
           </thead>
           <tbody>
             ${farmersList.map(f => `
-              <tr>
-                <td><strong>${f.name}</strong></td>
-                <td>${f.email}</td>
+              <tr class="farmer-row" data-id="${f.id}" data-name="${f.name.toLowerCase()}" data-status="${f.status}">
+                <td>
+                  <strong style="color: var(--text-primary); font-size: 0.92rem;">${f.name}</strong>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">ID: ${f.id}</div>
+                </td>
+                <td>
+                  <div>${f.email}</div>
+                  <small style="color: var(--text-muted); font-size: 0.75rem;">${f.phone || '+254 700 000 000'}</small>
+                </td>
+                <td><span style="font-size: 0.85rem; color: var(--text-secondary);">${f.department || 'Nakuru Ward'}</span></td>
                 <td><span class="badge badge-green">${f.role.toUpperCase()}</span></td>
                 <td>${ui.statusIndicator(f.status)}</td>
-                <td>${f.lastLogin}</td>
+                <td style="font-size: 0.8rem; color: var(--text-muted);">${f.lastLogin}</td>
                 <td>
-                  <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;" onclick="location.hash='#farms'">View Farm</button>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button class="btn btn-outline btn-farmer-dossier" data-id="${f.id}" style="padding: 4px 8px; font-size: 0.75rem;" title="View Farmer Dossier">
+                      🔍 Dossier
+                    </button>
+                    <button class="btn btn-outline btn-farmer-edit" data-id="${f.id}" style="padding: 4px 8px; font-size: 0.75rem;" title="Edit Farmer Record">
+                      ✏️ Edit
+                    </button>
+                    <button class="btn btn-outline btn-farmer-status" data-id="${f.id}" data-status="${f.status}" style="padding: 4px 8px; font-size: 0.75rem; color: ${f.status === 'ACTIVE' ? 'var(--accent-rose)' : 'var(--primary-dark)'};">
+                      ${f.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </div>
                 </td>
               </tr>
             `).join('')}
@@ -822,6 +1282,147 @@ export const views = {
         </table>
       </div>
     `;
+
+    // Filter handlers
+    const searchInput = container.querySelector('#farmersSearch input');
+    const filterSelect = container.querySelector('#farmersSearch select');
+    const resetBtn = container.querySelector('#farmersSearch .btn-reset-filters');
+
+    const applyFilters = () => {
+      const q = (searchInput?.value || '').toLowerCase().trim();
+      const status = filterSelect?.value || '';
+
+      container.querySelectorAll('.farmer-row').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const rowStatus = row.getAttribute('data-status');
+        const matchQ = !q || text.includes(q);
+        const matchStatus = !status || rowStatus === status;
+        row.style.display = (matchQ && matchStatus) ? '' : 'none';
+      });
+    };
+
+    searchInput?.addEventListener('input', applyFilters);
+    filterSelect?.addEventListener('change', applyFilters);
+    resetBtn?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      if (filterSelect) filterSelect.value = '';
+      applyFilters();
+    });
+
+    // Action handlers: Dossier Modal
+    container.querySelectorAll('.btn-farmer-dossier').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const farmerId = btn.getAttribute('data-id');
+        const farmer = farmersList.find(f => f.id === farmerId);
+        if (!farmer) return;
+
+        showModal({
+          title: `Producer Dossier: ${farmer.name}`,
+          maxWidth: '680px',
+          confirmText: 'Done',
+          contentHtml: `
+            <div style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 16px;">
+              <div style="display: flex; gap: 16px; align-items: center; background: var(--bg-primary); padding: 14px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                <div style="width: 52px; height: 52px; border-radius: 50%; background: var(--primary-light); color: var(--primary-dark); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 800;">
+                  🚜
+                </div>
+                <div>
+                  <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary);">${farmer.name}</h3>
+                  <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 2px;">
+                    Official Contact: <strong>${farmer.email}</strong> · ${farmer.phone || '+254 712 345 678'}
+                  </div>
+                  <div style="margin-top: 6px;">
+                    <span class="badge badge-green">${farmer.role.toUpperCase()}</span>
+                    <span class="badge badge-blue">${farmer.department || 'Nakuru Ward'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div style="border: 1px solid var(--border-color); border-radius: var(--radius-xs); padding: 12px 14px;">
+                  <strong style="color: var(--text-primary); display: block; margin-bottom: 6px;">📍 Agricultural Holdings</strong>
+                  <div>Primary Farm: <strong>Green Valley Model Farm</strong></div>
+                  <div>Parcels: <strong>2 Fields (10.0 Hectares total)</strong></div>
+                  <div>Primary Cultivars: <strong>Highland Hybrid Maize, Dry Beans</strong></div>
+                  <div>Soil Profile: <strong>Volcanic Loam (pH 6.4)</strong></div>
+                </div>
+
+                <div style="border: 1px solid var(--border-color); border-radius: var(--radius-xs); padding: 12px 14px;">
+                  <strong style="color: var(--text-primary); display: block; margin-bottom: 6px;">📋 Extension & Advisories</strong>
+                  <div>Assigned Officer: <strong>Grace Wanjiku (Extension)</strong></div>
+                  <div>Last Extension Visit: <strong>2026-09-14 (Field Inspection)</strong></div>
+                  <div>Advisory Adoption: <strong>94% High Compliance</strong></div>
+                  <div>SMS Weather Alerts: <strong style="color: var(--primary-dark);">Subscribed (Active)</strong></div>
+                </div>
+              </div>
+
+              <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius-xs); padding: 12px 14px; color: #166534;">
+                <strong>Spatial Verification Status:</strong> Cadastral coordinates verified with WGS84 GPS centroid. Eligible for national fertilizer subsidy program.
+              </div>
+            </div>
+          `
+        });
+      });
+    });
+
+    // Action handlers: Edit Modal
+    container.querySelectorAll('.btn-farmer-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const farmerId = btn.getAttribute('data-id');
+        const farmer = farmersList.find(f => f.id === farmerId);
+        if (!farmer) return;
+
+        showModal({
+          title: `Edit Farmer: ${farmer.name}`,
+          confirmText: 'Update Record',
+          contentHtml: `
+            <div style="display: flex; flex-direction: column; gap: 14px; font-size: 0.85rem;">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input class="form-input" name="name" value="${farmer.name}" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Contact Email</label>
+                <input class="form-input" name="email" value="${farmer.email}" required>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                  <label class="form-label">Phone Number</label>
+                  <input class="form-input" name="phone" value="${farmer.phone || '+254 700 000 000'}">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Ward / Sub-county</label>
+                  <input class="form-input" name="department" value="${farmer.department || 'Nakuru Ward'}">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Assigned Agricultural Role</label>
+                <select class="form-input" name="role">
+                  <option value="farmer" ${farmer.role === 'farmer' ? 'selected' : ''}>Farmer (Smallholder)</option>
+                  <option value="farm_manager" ${farmer.role === 'farm_manager' ? 'selected' : ''}>Farm Manager (Commercial)</option>
+                </select>
+              </div>
+            </div>
+          `,
+          onConfirm: async (formData) => {
+            await adminService.updateUser(farmer.id, formData);
+            views.farmers(container);
+          }
+        });
+      });
+    });
+
+    // Action handlers: Status toggle
+    container.querySelectorAll('.btn-farmer-status').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const farmerId = btn.getAttribute('data-id');
+        const currentStatus = btn.getAttribute('data-status');
+        const nextStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+
+        await adminService.toggleUserStatus(farmerId);
+        views.farmers(container);
+      });
+    });
 
     container.querySelector('#btnRegisterNewFarmer')?.addEventListener('click', () => {
       authViews.showFarmerOnboardingWizard(() => views.farmers(container));
@@ -1965,3 +2566,77 @@ export const views = {
   }
 };
 
+// ─── Module-level helpers for AccuWeather farm weather strips ──────────────────
+
+/**
+ * Update the dark weather strip inside a farm card with live AccuWeather data.
+ * @param {HTMLElement} container - The page container element
+ * @param {Object} farm - Farm object
+ * @param {Object} bundle - { current, forecast, alerts } from weatherService.getWeatherForFarm()
+ */
+function _updateFarmWeatherStrip(container, farm, bundle) {
+  const strip = container.querySelector(`#weatherStrip_${farm.id}`);
+  if (!strip) return;
+
+  const cc = bundle?.current;
+  if (!cc || cc.temperature == null) {
+    _setFarmWeatherStripError(container, farm, 'No data — check GPS coordinates');
+    return;
+  }
+
+  const temp = Math.round(cc.temperature.value);
+  const tempColor = temp >= 30 ? '#f43f5e' : temp >= 22 ? '#f59e0b' : '#10b981';
+  const cond = cc.weatherText ?? 'N/A';
+  const humid = cc.relativeHumidity ?? '--';
+  const wind = cc.wind?.speed != null ? Math.round(cc.wind.speed) : '--';
+  const isDayTime = cc.isDayTime !== false;
+  const alertCount = bundle?.alerts?.length ?? 0;
+
+  strip.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;flex:1;">
+      <span style="font-size:1.8rem;font-weight:900;color:${tempColor};">${temp}°C</span>
+      <div>
+        <div style="font-size:0.72rem;color:#e2e8f0;font-weight:600;">${isDayTime ? '☀️' : '🌙'} ${cond}</div>
+        <div style="font-size:0.65rem;color:#64748b;margin-top:2px;">💧 ${humid}% · 💨 ${wind} km/h</div>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      ${alertCount > 0 ? `<div style="background:#f59e0b;color:#fff;border-radius:4px;padding:2px 6px;font-size:0.62rem;font-weight:700;margin-bottom:2px;">⚠️ ${alertCount} alert${alertCount > 1 ? 's' : ''}</div>` : ''}
+      <div style="font-size:0.6rem;color:#334155;">AccuWeather</div>
+      <div style="font-size:0.58rem;color:#1e3a5f;">${new Date().toLocaleTimeString()}</div>
+    </div>
+  `;
+}
+
+/**
+ * Show an error state in the farm weather strip.
+ */
+function _setFarmWeatherStripError(container, farm, message) {
+  const strip = container.querySelector(`#weatherStrip_${farm.id}`);
+  if (!strip) return;
+  strip.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;width:100%;">
+      <span style="font-size:1rem;">⚠️</span>
+      <div>
+        <div style="font-size:0.72rem;color:#94a3b8;">${message}</div>
+        <div style="font-size:0.62rem;color:#475569;">AccuWeather · ${farm.latitude != null ? 'GPS OK' : 'No GPS coordinates'}</div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Map AccuWeather icon number to an emoji for forecast display.
+ * @param {number} icon
+ * @returns {string}
+ */
+function _getForecastEmoji(icon) {
+  const map = {
+    1:'☀️',2:'🌤️',3:'⛅',4:'🌥️',5:'🌫️',6:'🌥️',7:'☁️',8:'☁️',
+    11:'🌫️',12:'🌧️',13:'🌦️',14:'🌦️',15:'⛈️',16:'⛈️',17:'🌩️',18:'🌧️',
+    19:'🌨️',22:'❄️',29:'🌧️',30:'🌡️',31:'🥶',32:'💨',
+    33:'🌙',34:'🌙',35:'⛅',36:'🌥️',37:'🌫️',38:'🌥️',
+    39:'🌧️',40:'🌧️',41:'⛈️',42:'⛈️',43:'🌨️',44:'❄️'
+  };
+  return map[icon] ?? '🌤️';
+}

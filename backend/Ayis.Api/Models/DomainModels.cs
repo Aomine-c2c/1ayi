@@ -196,3 +196,88 @@ public class AgronomicRule
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
+
+public class ReportItem
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Type { get; set; } = "farm_performance";
+    public string Title { get; set; } = string.Empty;
+    public string Category { get; set; } = "Operational";
+    public string Region { get; set; } = "Natural Region II (Highveld)";
+    public string Crop { get; set; } = "White Maize (SC719)";
+    public string Format { get; set; } = "PDF / GeoJSON";
+    public string Date { get; set; } = DateTime.UtcNow.ToString("yyyy-MM-dd");
+    public string Status { get; set; } = "READY";
+    public string? DataJson { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class AuditLogItem
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string User { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public string Action { get; set; } = string.Empty;
+    public string Resource { get; set; } = string.Empty;
+    public string Timestamp { get; set; } = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+    public string Status { get; set; } = "SUCCESS";
+    public string Details { get; set; } = string.Empty;
+}
+
+public class FieldInspectionItem
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string FarmerName { get; set; } = string.Empty;
+    public string FarmerId { get; set; } = string.Empty;
+    public string FarmName { get; set; } = string.Empty;
+    public string FarmId { get; set; } = string.Empty;
+    public string FieldName { get; set; } = string.Empty;
+    public string FieldId { get; set; } = string.Empty;
+    public string Crop { get; set; } = string.Empty;
+    public string GrowthStage { get; set; } = string.Empty;
+    public string FieldCondition { get; set; } = "GOOD";
+    public string Observations { get; set; } = string.Empty;
+    public string Severity { get; set; } = "LOW";
+    public string? Notes { get; set; }
+    public bool FollowUpNeeded { get; set; } = false;
+    public string? FollowUpDetails { get; set; }
+    public string Inspector { get; set; } = string.Empty;
+    public string InspectionDate { get; set; } = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm");
+    public string Status { get; set; } = "COMPLETED";
+    public int Score { get; set; } = 90;
+}
+
+public class FieldObservationItem
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Farm { get; set; } = string.Empty;
+    public string FarmId { get; set; } = string.Empty;
+    public string Field { get; set; } = string.Empty;
+    public string FieldId { get; set; } = string.Empty;
+    public string Crop { get; set; } = string.Empty;
+    public string GrowthStage { get; set; } = string.Empty;
+    public string Category { get; set; } = "Crop Vigor & Nutrition";
+    public string Severity { get; set; } = "INFO";
+    public string Text { get; set; } = string.Empty;
+    public string? Notes { get; set; }
+    public string Date { get; set; } = DateTime.UtcNow.ToString("yyyy-MM-dd");
+    public string ScoutName { get; set; } = string.Empty;
+    public bool FollowUpRequired { get; set; } = false;
+    public string FollowUpStatus { get; set; } = "Resolved";
+}
+
+public class FieldTaskItem
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Title { get; set; } = string.Empty;
+    public string Category { get; set; } = "Agronomic Verification";
+    public string FarmName { get; set; } = string.Empty;
+    public string FarmerName { get; set; } = string.Empty;
+    public string Field { get; set; } = string.Empty;
+    public string Crop { get; set; } = string.Empty;
+    public string Priority { get; set; } = "MEDIUM";
+    public string Status { get; set; } = "PENDING";
+    public string Due { get; set; } = DateTime.UtcNow.AddDays(2).ToString("yyyy-MM-dd");
+    public string AssignedTo { get; set; } = string.Empty;
+    public string? Notes { get; set; }
+}

@@ -1,1 +1,11 @@
-{"Version":1,"Hash":"vjSuNhhp5oYRN8QscUwq+XNG3Cs6+PzJ5j7kloFDKUU=","Source":"Ayis.Api","BasePath":"/","Mode":"Root","ManifestType":"Build","ReferencedProjectsConfiguration":[],"DiscoveryPatterns":[],"Assets":[],"Endpoints":[]}
+{
+  "Version": 1,
+  "Hash": "wQku/E5gT1Jh+uYa+84iIjgdRh5Z3w8ltwLmzwexfmI=",
+  "Source": "Ayis.Api",
+  "BasePath": "_content/Ayis.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

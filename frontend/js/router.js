@@ -16,16 +16,36 @@ export function initRouter() {
   const contentArea = document.getElementById('contentViewport');
   const roleSelect = document.getElementById('activeRoleSelect');
 
+  // Update top navbar reactive authentication elements
+  function updateNavbarAuthUI() {
+    const isLoggedIn = authService.isLoggedIn();
+    const btnSignIn = document.getElementById('btnTopSignIn');
+    const btnSignOut = document.getElementById('btnTopSignOut');
+    const userBadge = document.getElementById('userProfileBadge');
+    const topAvatar = document.getElementById('topAvatar');
+    const userRoleTitle = document.getElementById('userRoleTitle');
+    const userRoleSubtitle = document.getElementById('userRoleSubtitle');
+    const menuUserName = document.getElementById('menuUserName');
+    const menuUserEmail = document.getElementById('menuUserEmail');
+
+    const currentUser = authService.getCurrentUser();
+    const config = ROLE_CONFIG[authService.getCurrentRole()] || ROLE_CONFIG.super_admin;
+
+    if (btnSignIn) btnSignIn.style.display = isLoggedIn ? 'none' : 'inline-flex';
+    if (btnSignOut) btnSignOut.style.display = isLoggedIn ? 'inline-flex' : 'none';
+
+    if (topAvatar) topAvatar.textContent = currentUser?.avatar || '🌱';
+    if (userRoleTitle) userRoleTitle.textContent = isLoggedIn ? (currentUser?.firstName ? `${currentUser.firstName} ${currentUser.lastName}` : config.title) : 'Guest Visitor';
+    if (userRoleSubtitle) userRoleSubtitle.textContent = isLoggedIn ? config.name : 'Public Access';
+    if (menuUserName) menuUserName.textContent = currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : config.name;
+    if (menuUserEmail) menuUserEmail.textContent = currentUser?.email || 'guest@ayis.org';
+
+  }
+
   // Render role-specific navigation menu
   function updateSidebarNavigation(role) {
     const navMenu = document.getElementById('dynamicNavMenu');
-    const userRoleTitle = document.getElementById('userRoleTitle');
-    const userRoleSubtitle = document.getElementById('userRoleSubtitle');
-
     const config = ROLE_CONFIG[role] || ROLE_CONFIG.super_admin;
-
-    if (userRoleTitle) userRoleTitle.textContent = config.title;
-    if (userRoleSubtitle) userRoleSubtitle.textContent = config.subtitle;
 
     if (navMenu) {
       navMenu.innerHTML = `
@@ -40,11 +60,16 @@ export function initRouter() {
         `).join('')}
       `;
     }
+
+    updateNavbarAuthUI();
   }
 
   // Handle route switching
   async function handleRoute() {
-    const hash = window.location.hash || '#dashboard';
+    // Reset public view class; the landing page will add it back if needed
+    document.body.classList.remove('public-view');
+    
+    const hash = window.location.hash || '#';
     const currentRole = authService.getCurrentRole();
 
     // Update active state in sidebar
@@ -111,9 +136,24 @@ export function initRouter() {
         ])
       };
 
+      // Check authentication requirement: if logged out and accessing private area, redirect to landing
+      const isUserLoggedIn = authService.isLoggedIn();
+      const publicExempt = ['logout', 'login', 'forgot-password', 'reset-password', 'help', 'about', '404', '403', '500', 'offline', 'maintenance', ''];
+
+      if (!isUserLoggedIn && !publicExempt.includes(cleanHash) && !cleanHash.startsWith('search')) {
+        authViews.renderSignedOutView(contentArea);
+        updateNavbarAuthUI();
+        return;
+      }
+
+      if (cleanHash === 'logout' || cleanHash === '') {
+        authViews.renderSignedOutView(contentArea);
+        updateNavbarAuthUI();
+        return;
+      }
+
       // Check if user is attempting to access a route disallowed for their active role
       const allowedRoutes = ROLE_ALLOWED_ROUTES[currentRole];
-      const publicExempt = ['login', 'forgot-password', 'reset-password', 'help', 'about', '404', '403', '500', 'offline', 'maintenance'];
       if (allowedRoutes && !allowedRoutes.has(cleanHash) && !publicExempt.includes(cleanHash) && !cleanHash.startsWith('search')) {
         views.renderHttpState(contentArea, '403', `Access Denied: The active role '${currentRole}' is not authorized to access the '#${cleanHash}' domain.`);
         return;
@@ -123,6 +163,7 @@ export function initRouter() {
       if (hash === '#dashboard' || cleanHash === 'dashboard') {
         if (roleViews[currentRole]) {
           await roleViews[currentRole](contentArea);
+          updateNavbarAuthUI();
           return;
         }
       }
@@ -360,7 +401,11 @@ export function initRouter() {
       // Explicit direct mapping to views methods
       const routeMap = {
         'dashboard': views.dashboard,
-        'login': () => authViews.showLoginModal(),
+        'logout': () => authViews.renderSignedOutView(contentArea),
+        'login': () => authViews.showLoginModal(() => {
+          updateNavbarAuthUI();
+          window.location.hash = '#dashboard';
+        }),
         'forgot-password': () => authViews.showForgotPasswordModal(),
         'reset-password': () => authViews.showResetPasswordModal(),
         'profile': () => authViews.showUserProfileModal(),
@@ -437,8 +482,10 @@ export function initRouter() {
           </div>
         `;
       }
+      updateNavbarAuthUI();
     } catch (err) {
       contentArea.innerHTML = `<div class="panel" style="padding: 24px; color: var(--accent-rose);">Failed to render view: ${err.message}</div>`;
+      updateNavbarAuthUI();
     }
   }
 

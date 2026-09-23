@@ -250,4 +250,161 @@ public class WeatherAndIntelligenceRepository
         var affected = await conn.ExecuteAsync(sql, rule);
         return affected > 0;
     }
+
+    // Reports
+    public async Task<IEnumerable<ReportItem>> GetReportsAsync()
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"SELECT * FROM reports ORDER BY date DESC;";
+        return await conn.QueryAsync<ReportItem>(sql);
+    }
+
+    public async Task<bool> CreateReportAsync(ReportItem report)
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"
+            INSERT INTO reports (id, type, title, category, region, crop, format, date, status, data_json, created_at)
+            VALUES (@Id, @Type, @Title, @Category, @Region, @Crop, @Format, @Date, @Status, @DataJson, @CreatedAt);";
+        return await conn.ExecuteAsync(sql, report) > 0;
+    }
+
+    // Audit Logs
+    public async Task<IEnumerable<AuditLogItem>> GetAuditLogsAsync()
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 100;";
+        return await conn.QueryAsync<AuditLogItem>(sql);
+    }
+
+    public async Task<bool> CreateAuditLogAsync(AuditLogItem log)
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"
+            INSERT INTO audit_logs (id, user, role, action, resource, timestamp, status, details)
+            VALUES (@Id, @User, @Role, @Action, @Resource, @Timestamp, @Status, @Details);";
+        return await conn.ExecuteAsync(sql, log) > 0;
+    }
+
+    // Field Inspections
+    public async Task<IEnumerable<FieldInspectionItem>> GetInspectionsAsync()
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"
+            SELECT 
+                id AS Id,
+                farmer_name AS FarmerName,
+                farmer_id AS FarmerId,
+                farm_name AS FarmName,
+                farm_id AS FarmId,
+                field_name AS FieldName,
+                field_id AS FieldId,
+                crop AS Crop,
+                growth_stage AS GrowthStage,
+                field_condition AS FieldCondition,
+                observations AS Observations,
+                severity AS Severity,
+                notes AS Notes,
+                follow_up_needed AS FollowUpNeeded,
+                follow_up_details AS FollowUpDetails,
+                inspector AS Inspector,
+                inspection_date AS InspectionDate,
+                status AS Status,
+                score AS Score
+            FROM field_inspections 
+            ORDER BY inspection_date DESC;";
+        return await conn.QueryAsync<FieldInspectionItem>(sql);
+    }
+
+    public async Task<bool> CreateInspectionAsync(FieldInspectionItem item)
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"
+            INSERT INTO field_inspections 
+            (id, farmer_name, farmer_id, farm_name, farm_id, field_name, field_id, crop, growth_stage, field_condition, observations, severity, notes, follow_up_needed, follow_up_details, inspector, inspection_date, status, score)
+            VALUES 
+            (@Id, @FarmerName, @FarmerId, @FarmName, @FarmId, @FieldName, @FieldId, @Crop, @GrowthStage, @FieldCondition, @Observations, @Severity, @Notes, @FollowUpNeeded, @FollowUpDetails, @Inspector, @InspectionDate, @Status, @Score);";
+        return await conn.ExecuteAsync(sql, item) > 0;
+    }
+
+    // Field Observations
+    public async Task<IEnumerable<FieldObservationItem>> GetObservationsAsync(string? fieldId = null)
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"
+            SELECT 
+                id AS Id,
+                farm AS Farm,
+                farm_id AS FarmId,
+                field AS Field,
+                field_id AS FieldId,
+                crop AS Crop,
+                growth_stage AS GrowthStage,
+                category AS Category,
+                severity AS Severity,
+                text AS Text,
+                notes AS Notes,
+                date AS Date,
+                scout_name AS ScoutName,
+                follow_up_required AS FollowUpRequired,
+                follow_up_status AS FollowUpStatus
+            FROM field_observations
+            WHERE (@FieldId IS NULL OR field_id = @FieldId)
+            ORDER BY date DESC;";
+        return await conn.QueryAsync<FieldObservationItem>(sql, new { FieldId = fieldId });
+    }
+
+    public async Task<bool> CreateObservationAsync(FieldObservationItem item)
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"
+            INSERT INTO field_observations
+            (id, farm, farm_id, field, field_id, crop, growth_stage, category, severity, text, notes, date, scout_name, follow_up_required, follow_up_status)
+            VALUES
+            (@Id, @Farm, @FarmId, @Field, @FieldId, @Crop, @GrowthStage, @Category, @Severity, @Text, @Notes, @Date, @ScoutName, @FollowUpRequired, @FollowUpStatus);";
+        return await conn.ExecuteAsync(sql, item) > 0;
+    }
+
+    // Field Tasks
+    public async Task<IEnumerable<FieldTaskItem>> GetTasksAsync()
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"
+            SELECT 
+                id AS Id,
+                title AS Title,
+                category AS Category,
+                farm_name AS FarmName,
+                farmer_name AS FarmerName,
+                field AS Field,
+                crop AS Crop,
+                priority AS Priority,
+                status AS Status,
+                due AS Due,
+                assigned_to AS AssignedTo,
+                notes AS Notes
+            FROM field_tasks
+            ORDER BY due ASC;";
+        return await conn.QueryAsync<FieldTaskItem>(sql);
+    }
+
+    public async Task<bool> UpdateTaskStatusAsync(string id, string status)
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"UPDATE field_tasks SET status = @Status WHERE id = @Id;";
+        return await conn.ExecuteAsync(sql, new { Id = id, Status = status }) > 0;
+    }
+
+    public async Task<bool> MarkNotificationAsReadAsync(string id)
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"UPDATE notifications SET is_read = 1 WHERE id = @Id;";
+        return await conn.ExecuteAsync(sql, new { Id = id }) > 0;
+    }
+
+    public async Task<bool> MarkAllNotificationsAsReadAsync()
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"UPDATE notifications SET is_read = 1;";
+        return await conn.ExecuteAsync(sql) > 0;
+    }
 }

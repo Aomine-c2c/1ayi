@@ -1,4 +1,5 @@
 import { CanvasMapProvider } from './canvasMapProvider.js';
+import { LeafletMapProvider } from './leafletMapProvider.js';
 
 /**
  * Map Factory & Registry
@@ -8,10 +9,11 @@ import { CanvasMapProvider } from './canvasMapProvider.js';
 class MapProviderFactory {
   constructor() {
     this.providers = new Map();
-    this.defaultProvider = 'canvas';
+    this.defaultProvider = 'leaflet';
 
-    // Register built-in Canvas Map Provider
+    // Register built-in Map Providers
     this.register('canvas', CanvasMapProvider);
+    this.register('leaflet', LeafletMapProvider);
   }
 
   register(name, providerClass) {

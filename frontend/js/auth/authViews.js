@@ -766,7 +766,7 @@ export const authViews = {
       overlay.querySelector('#btnLogoutBtn')?.addEventListener('click', () => {
         authService.logout();
         overlay.classList.remove('active');
-        window.location.reload();
+        window.location.hash = '#logout';
       });
 
       const personalForm = overlay.querySelector('#profilePersonalForm');
@@ -1325,5 +1325,126 @@ export const authViews = {
     };
 
     updateWizardUI();
+  },
+
+  // =========================================================================
+  // 6. DEDICATED SIGNED-OUT / LOGGED-OUT LANDING VIEW
+  // =========================================================================
+  renderSignedOutView(container) {
+    // Add public-view class to body to hide the sidebar and top navbar via CSS
+    document.body.classList.add('public-view');
+
+    const isLoggedIn = authService.isLoggedIn();
+
+    container.innerHTML = `
+      <div class="landing-page-wrapper">
+        <!-- Hero Section -->
+        <header class="hero-section" style="position: relative; overflow: hidden; border-radius: 0 0 20px 20px;">
+          <div class="hero-bg" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 1;">
+            <img src="assets/images/landing_hero_bg.jpg" alt="AYIS Future Farm" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.8;">
+            <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(15,23,42,0.6) 0%, rgba(15,23,42,0.95) 100%);"></div>
+          </div>
+          
+          <!-- Simple Public Navbar -->
+          <nav style="position: relative; z-index: 10; display: flex; justify-content: space-between; align-items: center; padding: 24px 40px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 2rem;">🌱</span>
+              <span style="font-size: 1.5rem; font-weight: 900; color: #fff; letter-spacing: -0.5px;">AYIS</span>
+            </div>
+            <div style="display: flex; gap: 16px;">
+              <button class="btn btn-outline" id="btnLandingDocs" style="color: #fff; border-color: rgba(255,255,255,0.3);">Documentation</button>
+              <button class="btn btn-primary" id="btnLandingSignInTop" style="box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39);">\${isLoggedIn ? 'Dashboard' : 'Sign In'}</button>
+            </div>
+          </nav>
+
+          <!-- Hero Content -->
+          <div style="position: relative; z-index: 10; padding: 80px 40px 120px; max-width: 900px; margin: 0 auto; text-align: center;">
+            <span class="badge badge-green" style="font-size: 0.85rem; letter-spacing: 1px; margin-bottom: 20px; background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399;">POWERED BY C# MINIMAL API & MYSQL 8</span>
+            <h1 style="font-size: 4rem; font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: 24px; letter-spacing: -1px;">
+              The Next Generation of <br><span style="background: -webkit-linear-gradient(45deg, #34d399, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Agricultural Yield Intelligence</span>
+            </h1>
+            <p style="font-size: 1.15rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 40px; max-width: 700px; margin-left: auto; margin-right: auto;">
+              Harness the power of real-time agrometeorological telemetry, geospatial crop profiling, and AI-driven suitability engines to maximize your farm's productivity and sustainability.
+            </p>
+            
+            <div style="display: flex; justify-content: center; gap: 16px;">
+              <button class="btn btn-primary" id="btnLandingSignInHero" style="padding: 14px 32px; font-size: 1.1rem; border-radius: 9999px;">
+                \${isLoggedIn ? 'Access Command Center' : 'Sign In'}
+              </button>
+              <button class="btn btn-outline" id="btnLandingOnboardHero" style="padding: 14px 32px; font-size: 1.1rem; border-radius: 9999px; color: #fff; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.05); display: \${isLoggedIn ? 'none' : 'inline-flex'};">
+                Register New Farm
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <!-- Features Showcase -->
+        <section style="padding: 80px 40px; max-width: 1200px; margin: 0 auto;">
+          <div style="text-align: center; margin-bottom: 60px;">
+            <h2 style="font-size: 2.2rem; font-weight: 800; color: var(--text-primary);">Enterprise-Grade Intelligence Pipeline</h2>
+            <p style="color: var(--text-muted); font-size: 1.1rem; margin-top: 12px;">A fully integrated architecture designed for national-scale agricultural operations.</p>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;">
+            <!-- Feature 1 -->
+            <div class="panel" style="padding: 32px; transition: transform 0.3s ease; border: 1px solid var(--border-subtle); background: var(--bg-primary);">
+              <div style="font-size: 2.5rem; margin-bottom: 16px;">⛅</div>
+              <h3 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 12px; color: var(--text-primary);">Live Agromet Telemetry</h3>
+              <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5;">Ingest real-time synoptic data, diurnal temperature curves, and precipitation forecasts directly into your crop suitability engine.</p>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="panel" style="padding: 32px; transition: transform 0.3s ease; border: 1px solid var(--border-subtle); background: var(--bg-primary);">
+              <div style="font-size: 2.5rem; margin-bottom: 16px;">🧠</div>
+              <h3 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 12px; color: var(--text-primary);">Yield Suitability Engine</h3>
+              <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5;">Evaluate crop viability against FAO agronomic specs and local soil profiles to generate dynamic planting and spraying recommendations.</p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="panel" style="padding: 32px; transition: transform 0.3s ease; border: 1px solid var(--border-subtle); background: var(--bg-primary);">
+              <div style="font-size: 2.5rem; margin-bottom: 16px;">🗺️</div>
+              <h3 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 12px; color: var(--text-primary);">Geospatial Command Map</h3>
+              <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5;">Track national farm boundaries and field observations via an interactive GIS canvas backed by SRID 4326 spatial indexing.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Footer -->
+        <footer style="background: var(--bg-secondary); padding: 40px; text-align: center; border-top: 1px solid var(--border-subtle);">
+          <div style="font-size: 1.8rem; margin-bottom: 12px;">🌱</div>
+          <p style="color: var(--text-muted); font-size: 0.85rem;">© 2026 AYIS — Agricultural Yield Intelligence System. All rights reserved.</p>
+          <div style="margin-top: 16px; font-size: 0.8rem; color: var(--text-muted);">
+            High-Performance Web · C# 8 Backend · MySQL Spatial
+          </div>
+        </footer>
+      </div>
+    `;
+
+    // Event Listeners for Landing Page Actions
+    const handleSignIn = () => {
+      if (isLoggedIn) {
+        document.body.classList.remove('public-view');
+        window.location.hash = '#dashboard';
+      } else {
+        authViews.showLoginModal(() => {
+          document.body.classList.remove('public-view');
+          window.location.hash = '#dashboard';
+        });
+      }
+    };
+
+    container.querySelector('#btnLandingSignInTop')?.addEventListener('click', handleSignIn);
+    container.querySelector('#btnLandingSignInHero')?.addEventListener('click', handleSignIn);
+    
+    container.querySelector('#btnLandingOnboardHero')?.addEventListener('click', () => {
+      authViews.showFarmerOnboardingWizard(() => {
+        document.body.classList.remove('public-view');
+        window.location.hash = '#dashboard';
+      });
+    });
+
+    container.querySelector('#btnLandingDocs')?.addEventListener('click', () => {
+      window.location.hash = '#help';
+    });
   }
 };

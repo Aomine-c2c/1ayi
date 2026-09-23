@@ -94,4 +94,17 @@ public class CropRepository
 
         return await conn.QueryAsync<CropVariety>(sql, new { CropId = cropId });
     }
+
+    public async Task<bool> CreateCycleAsync(CropCycle cycle)
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"
+            INSERT INTO crop_cycles 
+            (id, field_id, crop_id, variety_id, season_name, start_date, expected_harvest_date, actual_harvest_date, status, current_stage, target_yield_kg_ha, actual_yield_kg_ha, notes)
+            VALUES 
+            (@Id, @FieldId, @CropId, @VarietyId, @SeasonName, @StartDate, @ExpectedHarvestDate, @ActualHarvestDate, @Status, @CurrentStage, @TargetYieldKgHa, @ActualYieldKgHa, @Notes);";
+
+        var affected = await conn.ExecuteAsync(sql, cycle);
+        return affected > 0;
+    }
 }

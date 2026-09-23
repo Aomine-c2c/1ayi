@@ -11,13 +11,18 @@ using Ayis.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Configure Services & DI
-builder.Services.AddSingleton<IDbConnectionFactory, MySqlConnectionFactory>();
+var sqlitePath = Path.Combine(builder.Environment.ContentRootPath, "ayis.db");
+var sqliteConnString = $"Data Source={sqlitePath}";
+builder.Services.AddSingleton<IDbConnectionFactory>(_ => new SqliteConnectionFactory(sqliteConnString));
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<FarmRepository>();
 builder.Services.AddScoped<CropRepository>();
 builder.Services.AddScoped<WeatherAndIntelligenceRepository>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<RecommendationEngineService>();
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient<AccuWeatherService>();
+builder.Services.AddHostedService<WeatherPollingService>();
 
 // 2. JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "AYIS_ULTRA_SECURE_SECRET_KEY_FOR_JWT_TOKEN_SIGNING_2026_CHANGE_IN_PROD!";
@@ -87,6 +92,13 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+// Auto-initialize SQLite database schema & seeds
+using (var scope = app.Services.CreateScope())
+{
+    var dbFactory = scope.ServiceProvider.GetRequiredService<IDbConnectionFactory>();
+    SqliteDatabaseInitializer.Initialize(dbFactory);
+}
+
 app.UseCors("AllowFrontend");
 
 if (app.Environment.IsDevelopment() || true)
@@ -154,6 +166,24 @@ app.MapGet("/api/v1/farms", async (FarmRepository farmRepo, ClaimsPrincipal user
     return Results.Ok(farms);
 }).WithName("GetFarms").WithTags("Farms");
 
+// Farms: Create
+app.MapPost("/api/v1/farms", async (Farm farm, FarmRepository farmRepo) =>
+{
+    if (string.IsNullOrEmpty(farm.Id)) farm.Id = $"farm-{Guid.NewGuid().ToString().Substring(0, 8)}";
+    if (string.IsNullOrEmpty(farm.OwnerId)) farm.OwnerId = "u-008";
+    farm.CreatedAt = DateTime.UtcNow;
+    var res = await farmRepo.CreateAsync(farm);
+    return res > 0 ? Results.Created($"/api/v1/farms/{farm.Id}", farm) : Results.Problem("Failed to create farm");
+}).WithName("CreateFarm").WithTags("Farms");
+
+// Farms: Update
+app.MapPut("/api/v1/farms/{id}", async (string id, Farm farm, FarmRepository farmRepo) =>
+{
+    farm.Id = id;
+    var res = await farmRepo.UpdateAsync(farm);
+    return res ? Results.Ok(new { success = true, farm }) : Results.NotFound();
+}).WithName("UpdateFarm").WithTags("Farms");
+
 // Farms: Detail & Fields
 app.MapGet("/api/v1/farms/{id}", async (string id, FarmRepository farmRepo) =>
 {
@@ -166,6 +196,22 @@ app.MapGet("/api/v1/farms/{id}/fields", async (string id, FarmRepository farmRep
     var fields = await farmRepo.GetFieldsByFarmIdAsync(id);
     return Results.Ok(fields);
 }).WithName("GetFarmFields").WithTags("Farms");
+
+// Fields: List All or by farmId
+app.MapGet("/api/v1/fields", async (string? farmId, FarmRepository farmRepo) =>
+{
+    var fields = string.IsNullOrEmpty(farmId)
+        ? await farmRepo.GetAllFieldsAsync()
+        : await farmRepo.GetFieldsByFarmIdAsync(farmId);
+    return Results.Ok(fields);
+}).WithName("GetFields").WithTags("Fields");
+
+app.MapPost("/api/v1/fields", async (Field field, FarmRepository farmRepo) =>
+{
+    if (string.IsNullOrEmpty(field.Id)) field.Id = $"fld-{Guid.NewGuid().ToString().Substring(0, 8)}";
+    var res = await farmRepo.CreateFieldAsync(field);
+    return res > 0 ? Results.Created($"/api/v1/fields/{field.Id}", field) : Results.Problem("Failed to create field");
+}).WithName("CreateField").WithTags("Fields");
 
 // Crops & Catalog
 app.MapGet("/api/v1/crops", async (CropRepository cropRepo) =>
@@ -186,6 +232,13 @@ app.MapGet("/api/v1/cycles", async (CropRepository cropRepo, string? fieldId) =>
     var cycles = await cropRepo.GetCyclesAsync(fieldId);
     return Results.Ok(cycles);
 }).WithName("GetCycles").WithTags("Cycles");
+
+app.MapPost("/api/v1/cycles", async (CropCycle cycle, CropRepository cropRepo) =>
+{
+    if (string.IsNullOrEmpty(cycle.Id)) cycle.Id = $"cyc-{Guid.NewGuid().ToString().Substring(0, 8)}";
+    var res = await cropRepo.CreateCycleAsync(cycle);
+    return res ? Results.Created($"/api/v1/cycles/{cycle.Id}", cycle) : Results.Problem("Failed to create cycle");
+}).WithName("CreateCycle").WithTags("Cycles");
 
 // Weather: Observations
 app.MapGet("/api/v1/weather/recent", async (WeatherAndIntelligenceRepository weatherRepo) =>
@@ -279,6 +332,44 @@ app.MapGet("/api/v1/notifications", async (WeatherAndIntelligenceRepository noti
     return Results.Ok(notifications);
 }).WithName("GetNotifications").WithTags("Notifications");
 
+// ==========================================
+// 6. AccuWeather Proxy Endpoints
+// ==========================================
+
+// AccuWeather: Current Conditions for GPS coordinates
+app.MapGet("/api/v1/weather/current", async (double lat, double lon, AccuWeatherService accuWeather) =>
+{
+    var conditions = await accuWeather.GetCurrentConditionsAsync(lat, lon);
+    if (conditions == null)
+        return Results.Problem("Unable to fetch current conditions from AccuWeather.", statusCode: 502);
+    return Results.Ok(conditions);
+}).WithName("GetCurrentWeather").WithTags("AccuWeather");
+
+// AccuWeather: 5-Day Forecast for GPS coordinates
+app.MapGet("/api/v1/weather/forecast", async (double lat, double lon, AccuWeatherService accuWeather) =>
+{
+    var forecast = await accuWeather.GetFiveDayForecastAsync(lat, lon);
+    if (forecast == null)
+        return Results.Problem("Unable to fetch forecast from AccuWeather.", statusCode: 502);
+    return Results.Ok(forecast);
+}).WithName("GetWeatherForecast").WithTags("AccuWeather");
+
+// AccuWeather: Severe Weather Alerts for GPS coordinates
+app.MapGet("/api/v1/weather/alerts", async (double lat, double lon, AccuWeatherService accuWeather) =>
+{
+    var alerts = await accuWeather.GetAlertsAsync(lat, lon);
+    return Results.Ok(alerts);
+}).WithName("GetWeatherAlerts").WithTags("AccuWeather");
+
+// AccuWeather: Location Key lookup (for debugging / farm registration)
+app.MapGet("/api/v1/weather/location-key", async (double lat, double lon, AccuWeatherService accuWeather) =>
+{
+    var key = await accuWeather.GetLocationKeyAsync(lat, lon);
+    if (key == null)
+        return Results.Problem("Unable to resolve AccuWeather location key.", statusCode: 502);
+    return Results.Ok(new { locationKey = key, lat, lon });
+}).WithName("GetWeatherLocationKey").WithTags("AccuWeather");
+
 // Agronomic Rules & Baselines (Authored and Maintained by Agronomist)
 app.MapGet("/api/v1/agronomic-rules", async (WeatherAndIntelligenceRepository repo, string? cropId) =>
 {
@@ -302,6 +393,143 @@ app.MapPost("/api/v1/agronomic-rules", async (AgronomicRule rule, WeatherAndInte
         : Results.Problem("Failed to create rule.");
 }).WithName("CreateAgronomicRule").WithTags("AgronomicRules");
 
+// ==========================================
+// 7. Reports & Analytics Endpoints
+// ==========================================
+app.MapGet("/api/v1/reports", async (WeatherAndIntelligenceRepository repo) =>
+{
+    var reports = await repo.GetReportsAsync();
+    return Results.Ok(reports);
+}).WithName("GetReports").WithTags("Reports");
+
+app.MapPost("/api/v1/reports/generate", async (ReportItem report, WeatherAndIntelligenceRepository repo) =>
+{
+    if (string.IsNullOrEmpty(report.Id)) report.Id = $"rep-{Guid.NewGuid().ToString().Substring(0, 8)}";
+    report.Date = DateTime.UtcNow.ToString("yyyy-MM-dd");
+    report.Status = "READY";
+    report.CreatedAt = DateTime.UtcNow;
+    await repo.CreateReportAsync(report);
+    return Results.Created($"/api/v1/reports/{report.Id}", report);
+}).WithName("GenerateReport").WithTags("Reports");
+
+// ==========================================
+// 8. Audit Logs Endpoints
+// ==========================================
+app.MapGet("/api/v1/audit-logs", async (WeatherAndIntelligenceRepository repo) =>
+{
+    var logs = await repo.GetAuditLogsAsync();
+    return Results.Ok(logs);
+}).WithName("GetAuditLogs").WithTags("Audit");
+
+app.MapPost("/api/v1/audit-logs", async (AuditLogItem log, WeatherAndIntelligenceRepository repo) =>
+{
+    if (string.IsNullOrEmpty(log.Id)) log.Id = $"aud-{Guid.NewGuid().ToString().Substring(0, 8)}";
+    log.Timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+    await repo.CreateAuditLogAsync(log);
+    return Results.Created($"/api/v1/audit-logs/{log.Id}", log);
+}).WithName("CreateAuditLog").WithTags("Audit");
+
+// ==========================================
+// 9. Field Operations: Inspections, Observations, Tasks
+// ==========================================
+app.MapGet("/api/v1/inspections", async (WeatherAndIntelligenceRepository repo) =>
+{
+    var inspections = await repo.GetInspectionsAsync();
+    return Results.Ok(inspections);
+}).WithName("GetInspections").WithTags("FieldOperations");
+
+app.MapPost("/api/v1/inspections", async (FieldInspectionItem inspection, WeatherAndIntelligenceRepository repo) =>
+{
+    if (string.IsNullOrEmpty(inspection.Id)) inspection.Id = $"insp-{Guid.NewGuid().ToString().Substring(0, 8)}";
+    inspection.InspectionDate = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm");
+    var res = await repo.CreateInspectionAsync(inspection);
+    return res ? Results.Created($"/api/v1/inspections/{inspection.Id}", inspection) : Results.Problem("Failed to create inspection");
+}).WithName("CreateInspection").WithTags("FieldOperations");
+
+app.MapGet("/api/v1/observations", async (string? fieldId, WeatherAndIntelligenceRepository repo) =>
+{
+    var obs = await repo.GetObservationsAsync(fieldId);
+    return Results.Ok(obs);
+}).WithName("GetObservations").WithTags("FieldOperations");
+
+app.MapPost("/api/v1/observations", async (FieldObservationItem obs, WeatherAndIntelligenceRepository repo) =>
+{
+    if (string.IsNullOrEmpty(obs.Id)) obs.Id = $"obs-{Guid.NewGuid().ToString().Substring(0, 8)}";
+    obs.Date = DateTime.UtcNow.ToString("yyyy-MM-dd");
+    var res = await repo.CreateObservationAsync(obs);
+    return res ? Results.Created($"/api/v1/observations/{obs.Id}", obs) : Results.Problem("Failed to create observation");
+}).WithName("CreateObservation").WithTags("FieldOperations");
+
+app.MapGet("/api/v1/tasks", async (WeatherAndIntelligenceRepository repo) =>
+{
+    var tasks = await repo.GetTasksAsync();
+    return Results.Ok(tasks);
+}).WithName("GetTasks").WithTags("FieldOperations");
+
+app.MapPatch("/api/v1/tasks/{id}/status", async (string id, TaskStatusRequest req, WeatherAndIntelligenceRepository repo) =>
+{
+    var res = await repo.UpdateTaskStatusAsync(id, req.Status);
+    return res ? Results.Ok(new { success = true, id, status = req.Status }) : Results.NotFound();
+}).WithName("UpdateTaskStatus").WithTags("FieldOperations");
+
+// Notifications: Read / Read All
+app.MapPatch("/api/v1/notifications/{id}/read", async (string id, WeatherAndIntelligenceRepository repo) =>
+{
+    var res = await repo.MarkNotificationAsReadAsync(id);
+    return res ? Results.Ok(new { success = true }) : Results.NotFound();
+}).WithName("MarkNotificationAsRead").WithTags("Notifications");
+
+app.MapPost("/api/v1/notifications/read-all", async (WeatherAndIntelligenceRepository repo) =>
+{
+    await repo.MarkAllNotificationsAsReadAsync();
+    return Results.Ok(new { success = true });
+}).WithName("MarkAllNotificationsAsRead").WithTags("Notifications");
+
+// ==========================================
+// 10. User Management CRUD
+// ==========================================
+app.MapGet("/api/v1/users", async (UserRepository repo) =>
+{
+    var users = await repo.GetAllAsync();
+    return Results.Ok(users);
+}).WithName("GetUsers").WithTags("Users");
+
+app.MapGet("/api/v1/users/{id}", async (string id, UserRepository repo) =>
+{
+    var user = await repo.GetByIdAsync(id);
+    return user != null ? Results.Ok(user) : Results.NotFound();
+}).WithName("GetUserById").WithTags("Users");
+
+app.MapPost("/api/v1/users", async (User user, UserRepository repo) =>
+{
+    if (string.IsNullOrEmpty(user.Id)) user.Id = $"u-{Guid.NewGuid().ToString().Substring(0, 8)}";
+    if (string.IsNullOrEmpty(user.PasswordHash)) user.PasswordHash = "Password123!";
+    user.CreatedAt = DateTime.UtcNow;
+    var res = await repo.CreateAsync(user);
+    return res ? Results.Created($"/api/v1/users/{user.Id}", user) : Results.Problem("Failed to create user");
+}).WithName("CreateUser").WithTags("Users");
+
+app.MapPut("/api/v1/users/{id}", async (string id, User user, UserRepository repo) =>
+{
+    user.Id = id;
+    var res = await repo.UpdateAsync(user);
+    return res ? Results.Ok(new { success = true, user }) : Results.NotFound();
+}).WithName("UpdateUser").WithTags("Users");
+
+app.MapPatch("/api/v1/users/{id}/status", async (string id, UserStatusRequest req, UserRepository repo) =>
+{
+    var res = await repo.ToggleStatusAsync(id, req.IsActive);
+    return res ? Results.Ok(new { success = true, id, isActive = req.IsActive }) : Results.NotFound();
+}).WithName("ToggleUserStatus").WithTags("Users");
+
+app.MapDelete("/api/v1/users/{id}", async (string id, UserRepository repo) =>
+{
+    var res = await repo.DeleteAsync(id);
+    return res ? Results.Ok(new { success = true }) : Results.NotFound();
+}).WithName("DeleteUser").WithTags("Users");
+
 app.Run();
 
 public record LoginRequest(string Username, string Password);
+public record TaskStatusRequest(string Status);
+public record UserStatusRequest(bool IsActive);

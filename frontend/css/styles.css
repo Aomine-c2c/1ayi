@@ -719,3 +719,28 @@ canvas {
   border-bottom: none;
   color: var(--accent-rose);
 }
+
+/* Landing Page Styles */
+body.public-view {
+  background: var(--bg-primary);
+  overflow-x: hidden;
+}
+
+body.public-view .sidebar {
+  display: none !important;
+}
+
+body.public-view .top-navbar {
+  display: none !important;
+}
+
+body.public-view .main-wrapper {
+  margin-left: 0 !important;
+  width: 100vw;
+}
+
+body.public-view .content-viewport {
+  padding: 0 !important;
+  margin: 0 !important;
+  max-width: 100%;
+}

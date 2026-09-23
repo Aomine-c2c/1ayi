@@ -82,6 +82,29 @@ export class CanvasMapProvider extends MapAdapter {
     `;
     this.container.appendChild(this.stateOverlay);
 
+    // Weather popup overlay (persists on click, dismissible)
+    this.weatherPopup = document.createElement('div');
+    this.weatherPopup.className = 'canvas-map-weather-popup';
+    this.weatherPopup.style.cssText = `
+      position: absolute;
+      display: none;
+      background: linear-gradient(135deg, rgba(15,23,42,0.97) 0%, rgba(30,41,59,0.97) 100%);
+      color: #f1f5f9;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px -4px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
+      z-index: 60;
+      width: 280px;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+    `;
+    this.container.appendChild(this.weatherPopup);
+
+    // Map of farmId → weather data (populated by addWeatherPin)
+    this._weatherData = new Map();
+    // Map of farmId → accu weather icon number
+    this._weatherIconMap = new Map();
+
     // Resize observer for responsive behavior
     this.resizeObserver = new ResizeObserver(() => this.handleResize());
     this.resizeObserver.observe(this.container);
@@ -289,6 +312,11 @@ export class CanvasMapProvider extends MapAdapter {
 
     // 7. Legend & Compass Overlay
     this.drawCompassAndScale(ctx, w, h);
+
+    // 8. Weather temperature badges (rendered on top of markers)
+    if (this._weatherData && this._weatherData.size > 0) {
+      this._renderWeatherBadges();
+    }
   }
 
   drawZimbabweAgroZones(ctx, w, h) {
@@ -595,6 +623,10 @@ export class CanvasMapProvider extends MapAdapter {
 
     if (clickedMarker) {
       this.selectMarkerById(clickedMarker.id);
+      // Show weather popup if this marker has weather data
+      if (this._weatherData.has(clickedMarker.id)) {
+        this._showWeatherPopup(clickedMarker, e.clientX - this.container.getBoundingClientRect().left, e.clientY - this.container.getBoundingClientRect().top);
+      }
       return;
     }
 
@@ -606,6 +638,172 @@ export class CanvasMapProvider extends MapAdapter {
         this.onLocationSelect(coord);
       }
     }
+  }
+
+  /**
+   * Attach live AccuWeather data to a farm marker.
+   * The marker will display a temperature badge and clicking it opens a weather popup.
+   * @param {string} farmId - Must match a marker id already added via addMarkers()
+   * @param {Object} weatherBundle - { current, forecast, alerts } from weatherService.getWeatherForFarm()
+   */
+  addWeatherPin(farmId, weatherBundle) {
+    if (!weatherBundle || !weatherBundle.current) return;
+    this._weatherData.set(farmId, weatherBundle);
+    this.render(); // Re-render so temperature badge appears on the pin
+  }
+
+  /**
+   * Remove weather data for a farm (reverts to plain marker).
+   */
+  removeWeatherPin(farmId) {
+    this._weatherData.delete(farmId);
+    this._weatherIconMap.delete(farmId);
+    if (this.weatherPopup && this.weatherPopup.dataset.farmId === farmId) {
+      this.weatherPopup.style.display = 'none';
+    }
+    this.render();
+  }
+
+  /**
+   * Called from render() — draws temperature badge on markers that have weather data.
+   * @private
+   */
+  _renderWeatherBadges() {
+    const ctx = this.ctx;
+    for (const [farmId, bundle] of this._weatherData) {
+      const marker = this.markers.find(m => m.id === farmId);
+      if (!marker) continue;
+      const { x, y } = this.coordToPoint(marker.lat, marker.lon);
+      const temp = bundle.current?.temperature?.value;
+      if (temp == null) continue;
+
+      const tempLabel = `${Math.round(temp)}°C`;
+      const badgeW = 36;
+      const badgeH = 18;
+      const bx = x + 8;
+      const by = y - 28;
+
+      // Badge background
+      ctx.save();
+      const tempColor = temp >= 30 ? '#f43f5e' : temp >= 22 ? '#f59e0b' : '#10b981';
+      ctx.fillStyle = tempColor;
+      this._roundRect(ctx, bx, by, badgeW, badgeH, 4);
+      ctx.fill();
+
+      // Badge text
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 9px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tempLabel, bx + badgeW / 2, by + badgeH / 2);
+      ctx.restore();
+    }
+  }
+
+  /**
+   * Draw a rounded rectangle path on context.
+   * @private
+   */
+  _roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  /**
+   * Show the weather popup card for a clicked marker.
+   * @private
+   */
+  _showWeatherPopup(marker, clickX, clickY) {
+    const bundle = this._weatherData.get(marker.id);
+    if (!bundle || !this.weatherPopup) return;
+
+    const cc = bundle.current;
+    const days = bundle.forecast?.days ?? [];
+    const alerts = bundle.alerts ?? [];
+    const temp = cc?.temperature?.value != null ? `${Math.round(cc.temperature.value)}°C` : 'N/A';
+    const feelsLike = cc?.realFeelTemperature?.value != null ? `${Math.round(cc.realFeelTemperature.value)}°C` : '';
+    const humidity = cc?.relativeHumidity != null ? `${cc.relativeHumidity}%` : 'N/A';
+    const wind = cc?.wind?.speed != null ? `${Math.round(cc.wind.speed)} km/h ${cc.wind.direction ?? ''}` : 'N/A';
+    const rain24h = cc?.precipitationLast24hMm != null ? `${cc.precipitationLast24hMm.toFixed(1)} mm` : 'N/A';
+    const condition = cc?.weatherText ?? 'N/A';
+    const isDayTime = cc?.isDayTime !== false;
+    const uv = cc?.uvIndexText ?? '';
+    const tempColor = (cc?.temperature?.value ?? 20) >= 30 ? '#f43f5e' : (cc?.temperature?.value ?? 20) >= 22 ? '#f59e0b' : '#10b981';
+
+    // 3-day mini forecast
+    const forecastHtml = days.slice(0, 3).map(d => {
+      const dateLabel = new Date(d.date).toLocaleDateString('en-ZW', { weekday: 'short' });
+      return `
+        <div style="text-align:center; flex:1; padding: 6px 4px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+          <div style="font-size:0.65rem; color:#94a3b8; margin-bottom:2px;">${dateLabel}</div>
+          <div style="font-size:1rem; margin-bottom:2px;">${_getWeatherEmoji(d.icon)}</div>
+          <div style="font-size:0.7rem; font-weight:700; color:#f1f5f9;">${d.tempMax}°</div>
+          <div style="font-size:0.65rem; color:#64748b;">${d.tempMin}°</div>
+          <div style="font-size:0.6rem; color:#38bdf8; margin-top:2px;">${d.rainProbability}% 🌧</div>
+        </div>
+      `;
+    }).join('');
+
+    const alertBadge = alerts.length > 0
+      ? `<div style="background:#fef3c7;color:#92400e;padding:4px 8px;font-size:0.68rem;font-weight:600;border-radius:4px;margin-top:6px;">⚠️ ${alerts.length} active alert${alerts.length > 1 ? 's' : ''}</div>`
+      : '';
+
+    this.weatherPopup.dataset.farmId = marker.id;
+    this.weatherPopup.innerHTML = `
+      <div style="background: linear-gradient(135deg, ${tempColor}22, transparent); padding: 14px 16px 10px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2px;">
+          <div style="font-size:0.7rem; font-weight:700; color:#94a3b8; letter-spacing:0.05em; text-transform:uppercase;">
+            📍 ${marker.title ?? 'Farm'}
+          </div>
+          <button id="wp-close-${marker.id}" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1rem;line-height:1;padding:2px 4px;" aria-label="Close">&times;</button>
+        </div>
+        <div style="display:flex; align-items:flex-end; gap:6px;">
+          <span style="font-size:2.5rem; font-weight:800; color:${tempColor}; line-height:1;">${temp}</span>
+          ${feelsLike ? `<span style="font-size:0.72rem; color:#64748b; padding-bottom:6px;">Feels ${feelsLike}</span>` : ''}
+        </div>
+        <div style="font-size:0.78rem; color:#e2e8f0; margin-top:2px;">${isDayTime ? '☀️' : '🌙'} ${condition}</div>
+        ${alertBadge}
+      </div>
+      <div style="padding: 8px 16px 12px; border-top: 1px solid rgba(255,255,255,0.06);">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px;">
+          <div style="font-size:0.72rem; color:#94a3b8;">💧 Humidity</div><div style="font-size:0.72rem; font-weight:600;">${humidity}</div>
+          <div style="font-size:0.72rem; color:#94a3b8;">💨 Wind</div><div style="font-size:0.72rem; font-weight:600;">${wind}</div>
+          <div style="font-size:0.72rem; color:#94a3b8;">🌧 Rain 24h</div><div style="font-size:0.72rem; font-weight:600;">${rain24h}</div>
+          ${uv ? `<div style="font-size:0.72rem; color:#94a3b8;">☀️ UV</div><div style="font-size:0.72rem; font-weight:600;">${uv}</div>` : ''}
+        </div>
+        ${days.length > 0 ? `
+          <div style="font-size:0.65rem; color:#475569; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">5-Day Outlook</div>
+          <div style="display:flex; gap:4px;">${forecastHtml}</div>
+        ` : '<div style="font-size:0.7rem;color:#475569;">Forecast loading...</div>'}
+        <div style="margin-top:8px; font-size:0.6rem; color:#334155;">Source: AccuWeather · Cached 30 min</div>
+      </div>
+    `;
+
+    // Position popup
+    const popupW = 280;
+    const popupH = 280;
+    let left = clickX + 16;
+    let top = clickY - popupH / 2;
+    if (left + popupW > this.width - 10) left = clickX - popupW - 8;
+    if (top < 8) top = 8;
+    if (top + popupH > this.height - 8) top = this.height - popupH - 8;
+
+    this.weatherPopup.style.left = `${left}px`;
+    this.weatherPopup.style.top = `${top}px`;
+    this.weatherPopup.style.display = 'block';
+
+    // Close button handler
+    const closeBtn = this.weatherPopup.querySelector(`#wp-close-${marker.id}`);
+    if (closeBtn) closeBtn.addEventListener('click', () => { this.weatherPopup.style.display = 'none'; }, { once: true });
   }
 
   destroy() {
@@ -621,5 +819,20 @@ export class CanvasMapProvider extends MapAdapter {
     if (this.stateOverlay) {
       this.stateOverlay.remove();
     }
+    if (this.weatherPopup) {
+      this.weatherPopup.remove();
+    }
   }
+}
+
+// Module-level helper: AccuWeather icon number → weather emoji
+function _getWeatherEmoji(icon) {
+  const map = {
+    1:'☀️',2:'🌤️',3:'⛅',4:'🌥️',5:'🌫️',6:'🌥️',7:'☁️',8:'☁️',
+    11:'🌫️',12:'🌧️',13:'🌦️',14:'🌦️',15:'⛈️',16:'⛈️',17:'🌩️',18:'🌧️',
+    19:'🌨️',22:'❄️',29:'🌧️',30:'🌡️',31:'🥶',32:'💨',
+    33:'🌙',34:'🌙',35:'⛅',36:'🌥️',37:'🌫️',38:'🌥️',39:'🌧️',
+    40:'🌧️',41:'⛈️',42:'⛈️',43:'🌨️',44:'❄️'
+  };
+  return map[icon] ?? '🌤️';
 }

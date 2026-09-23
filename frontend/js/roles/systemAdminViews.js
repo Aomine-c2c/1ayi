@@ -364,103 +364,105 @@ export const systemAdminViews = {
   },
 
   showCreateUserModal() {
-    showModal('Provision New Platform User', `
-      <form id="createAdminUserForm" style="display: flex; flex-direction: column; gap: 14px;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-          <div>
-            <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Full Legal Name</label>
-            <input type="text" class="form-input" id="newUserName" placeholder="e.g. Christine Wangari" required>
+    showModal({
+      title: 'Provision New Platform User',
+      confirmText: 'Provision Account',
+      maxWidth: '560px',
+      contentHtml: `
+        <div style="display: flex; flex-direction: column; gap: 14px; font-size: 0.85rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">Full Legal Name</label>
+              <input type="text" class="form-input" name="name" placeholder="e.g. Christine Wangari" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Official Email</label>
+              <input type="email" class="form-input" name="email" placeholder="christine@ayis.org" required>
+            </div>
           </div>
-          <div>
-            <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Official Email</label>
-            <input type="email" class="form-input" id="newUserEmail" placeholder="christine@ayis.org" required>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">Assigned Role</label>
+              <select class="form-input" name="role">
+                <option value="farmer">Farmer</option>
+                <option value="farm_manager">Farm Manager</option>
+                <option value="agronomist" selected>Agronomist</option>
+                <option value="extension_officer">Agricultural Extension Officer</option>
+                <option value="field_officer">Field Officer</option>
+                <option value="weather_analyst">Weather/Data Analyst</option>
+                <option value="system_admin">System Administrator</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contact Mobile Phone</label>
+              <input type="text" class="form-input" name="phone" placeholder="+254 7XX XXX XXX">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Department / Organization</label>
+            <input type="text" class="form-input" name="department" placeholder="e.g. KALRO Njoro Research Station">
           </div>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-          <div>
-            <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Assigned Role</label>
-            <select class="form-input" id="newUserRole">
-              <option value="farmer">Farmer</option>
-              <option value="farm_manager">Farm Manager</option>
-              <option value="agronomist" selected>Agronomist</option>
-              <option value="extension_officer">Agricultural Extension Officer</option>
-              <option value="field_officer">Field Officer</option>
-              <option value="weather_analyst">Weather/Data Analyst</option>
-              <option value="system_admin">System Administrator</option>
-            </select>
-          </div>
-          <div>
-            <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Contact Mobile Phone</label>
-            <input type="text" class="form-input" id="newUserPhone" placeholder="+254 7XX XXX XXX" required>
-          </div>
-        </div>
-        <div>
-          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Department / Organization</label>
-          <input type="text" class="form-input" id="newUserDept" placeholder="e.g. KALRO Njoro Research Station" required>
-        </div>
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
-          <button type="button" class="btn btn-outline" onclick="document.getElementById('ayisModalBackdrop').remove()">Cancel</button>
-          <button type="submit" class="btn btn-primary">Provision Account</button>
-        </div>
-      </form>
-    `);
-
-    document.getElementById('createAdminUserForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      alert('User provisioned successfully into MySQL `users` table and activation email sent.');
-      document.getElementById('ayisModalBackdrop').remove();
-      systemAdminViews.users(document.getElementById('contentViewport'));
+      `,
+      onConfirm: async (formData) => {
+        await adminService.createUser({
+          name: formData.name,
+          email: formData.email,
+          role: formData.role,
+          phone: formData.phone,
+          department: formData.department
+        });
+        systemAdminViews.users(document.getElementById('contentViewport'));
+      }
     });
   },
 
   showEditUserModal(user) {
-    showModal(`Edit User: ${user.name}`, `
-      <form id="editAdminUserForm" style="display: flex; flex-direction: column; gap: 14px;">
-        <div>
-          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Full Name</label>
-          <input type="text" class="form-input" value="${user.name}" required>
-        </div>
-        <div>
-          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Email Address</label>
-          <input type="email" class="form-input" value="${user.email}" required>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-          <div>
-            <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Platform Role</label>
-            <select class="form-input">
-              <option value="farmer" ${user.role === 'farmer' ? 'selected' : ''}>Farmer</option>
-              <option value="farm_manager" ${user.role === 'farm_manager' ? 'selected' : ''}>Farm Manager</option>
-              <option value="agronomist" ${user.role === 'agronomist' ? 'selected' : ''}>Agronomist</option>
-              <option value="extension_officer" ${user.role === 'extension_officer' ? 'selected' : ''}>Agricultural Extension Officer</option>
-              <option value="field_officer" ${user.role === 'field_officer' ? 'selected' : ''}>Field Officer</option>
-              <option value="weather_analyst" ${user.role === 'weather_analyst' ? 'selected' : ''}>Weather/Data Analyst</option>
-              <option value="system_admin" ${user.role === 'system_admin' ? 'selected' : ''}>System Administrator</option>
-            </select>
+    showModal({
+      title: `Edit User: ${user.name}`,
+      confirmText: 'Save Changes',
+      maxWidth: '560px',
+      contentHtml: `
+        <div style="display: flex; flex-direction: column; gap: 14px; font-size: 0.85rem;">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-input" name="name" value="${user.name}" required>
           </div>
-          <div>
-            <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Account Status</label>
-            <select class="form-input">
-              <option value="ACTIVE" ${user.status === 'ACTIVE' ? 'selected' : ''}>ACTIVE</option>
-              <option value="INACTIVE" ${user.status === 'INACTIVE' ? 'selected' : ''}>INACTIVE</option>
-            </select>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-input" name="email" value="${user.email}" required>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label class="form-label">Platform Role</label>
+              <select class="form-input" name="role">
+                <option value="farmer" ${user.role === 'farmer' ? 'selected' : ''}>Farmer</option>
+                <option value="farm_manager" ${user.role === 'farm_manager' ? 'selected' : ''}>Farm Manager</option>
+                <option value="agronomist" ${user.role === 'agronomist' ? 'selected' : ''}>Agronomist</option>
+                <option value="extension_officer" ${user.role === 'extension_officer' ? 'selected' : ''}>Extension Officer</option>
+                <option value="field_officer" ${user.role === 'field_officer' ? 'selected' : ''}>Field Officer</option>
+                <option value="weather_analyst" ${user.role === 'weather_analyst' ? 'selected' : ''}>Weather Analyst</option>
+                <option value="system_admin" ${user.role === 'system_admin' ? 'selected' : ''}>System Administrator</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Account Status</label>
+              <select class="form-input" name="status">
+                <option value="ACTIVE" ${user.status === 'ACTIVE' ? 'selected' : ''}>ACTIVE</option>
+                <option value="INACTIVE" ${user.status === 'INACTIVE' ? 'selected' : ''}>INACTIVE</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <input type="text" class="form-input" name="department" value="${user.department || ''}">
           </div>
         </div>
-        <div>
-          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Department</label>
-          <input type="text" class="form-input" value="${user.department}">
-        </div>
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
-          <button type="button" class="btn btn-outline" onclick="document.getElementById('ayisModalBackdrop').remove()">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Changes</button>
-        </div>
-      </form>
-    `);
-
-    document.getElementById('editAdminUserForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      alert('User details updated successfully.');
-      document.getElementById('ayisModalBackdrop').remove();
-      systemAdminViews.users(document.getElementById('contentViewport'));
+      `,
+      onConfirm: async (formData) => {
+        await adminService.updateUser(user.id, formData);
+        systemAdminViews.users(document.getElementById('contentViewport'));
+      }
     });
   },
 
