@@ -56,10 +56,10 @@ public class WeatherPollingService : BackgroundService
         {
             if (stoppingToken.IsCancellationRequested) break;
 
-            if (farm.Latitude.HasValue && farm.Longitude.HasValue)
+            if (farm.Latitude != 0 || farm.Longitude != 0)
             {
-                var lat = farm.Latitude.Value;
-                var lon = farm.Longitude.Value;
+                var lat = farm.Latitude;
+                var lon = farm.Longitude;
 
                 _logger.LogInformation("Fetching weather for farm {FarmName} at ({Lat}, {Lon})", farm.Name, lat, lon);
                 var conditions = await accuWeather.GetCurrentConditionsAsync(lat, lon);

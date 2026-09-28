@@ -1353,7 +1353,7 @@ export const authViews = {
             </div>
             <div style="display: flex; gap: 16px;">
               <button class="btn btn-outline" id="btnLandingDocs" style="color: #fff; border-color: rgba(255,255,255,0.3);">Documentation</button>
-              <button class="btn btn-primary" id="btnLandingSignInTop" style="box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39);">\${isLoggedIn ? 'Dashboard' : 'Sign In'}</button>
+              <button class="btn btn-primary" id="btnLandingSignInTop" style="box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39);">${isLoggedIn ? 'Dashboard' : 'Sign In'}</button>
             </div>
           </nav>
 
@@ -1369,9 +1369,9 @@ export const authViews = {
             
             <div style="display: flex; justify-content: center; gap: 16px;">
               <button class="btn btn-primary" id="btnLandingSignInHero" style="padding: 14px 32px; font-size: 1.1rem; border-radius: 9999px;">
-                \${isLoggedIn ? 'Access Command Center' : 'Sign In'}
+                ${isLoggedIn ? 'Access Command Center' : 'Sign In'}
               </button>
-              <button class="btn btn-outline" id="btnLandingOnboardHero" style="padding: 14px 32px; font-size: 1.1rem; border-radius: 9999px; color: #fff; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.05); display: \${isLoggedIn ? 'none' : 'inline-flex'};">
+              <button class="btn btn-outline" id="btnLandingOnboardHero" style="padding: 14px 32px; font-size: 1.1rem; border-radius: 9999px; color: #fff; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.05); display: ${isLoggedIn ? 'none' : 'inline-flex'};">
                 Register New Farm
               </button>
             </div>

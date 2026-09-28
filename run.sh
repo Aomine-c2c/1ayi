@@ -5,6 +5,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FRONTEND_PORT="${1:-8080}"
 BACKEND_PORT="${2:-8000}"
 
+if [ -d "$HOME/.dotnet" ]; then
+    export DOTNET_ROOT="$HOME/.dotnet"
+    export PATH="$HOME/.dotnet:$PATH"
+fi
+
 echo "=========================================="
 echo "       AYIS Unified System Runner         "
 echo "=========================================="

@@ -137,7 +137,7 @@ export const views = {
     });
 
     setTimeout(async () => {
-      const { mapFactory } = await import('./geo/mapFactory.js');
+      const { mapFactory } = await import('./geo/mapFactory.js?v=2');
       const dashMap = mapFactory.create('dashboardGisMap', {
         center: { lat: -19.0154, lon: 29.1549 },
         zoom: 6,
@@ -249,7 +249,7 @@ export const views = {
     // ── Initialize canvas map with farm markers ──────────────────────────────
     let farmMap = null;
     try {
-      const { mapFactory } = await import('./geo/mapFactory.js');
+      const { mapFactory } = await import('./geo/mapFactory.js?v=2');
       farmMap = mapFactory.create('farmsWeatherMapCanvas', {
         center: { lat: -19.0154, lon: 29.1549 },
         zoom: 7,
@@ -259,7 +259,7 @@ export const views = {
 
       // Add farm markers
       if (farms.length > 0) {
-        farmMap.addMarkers(farms.filter(f => f.latitude != null && f.longitude != null).map(f => ({
+        farmMap.setMarkers(farms.filter(f => f.latitude != null && f.longitude != null).map(f => ({
           id: f.id,
           lat: f.latitude,
           lon: f.longitude,
