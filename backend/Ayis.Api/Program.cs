@@ -10,10 +10,26 @@ using Ayis.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load environment variables (e.g. JWT_KEY, ACCUWEATHER_API_KEY)
+// These override appsettings.json and MUST be set in production.
+builder.Configuration.AddEnvironmentVariables();
+
 // 1. Configure Services & DI
+// Prefer MySQL 8 (production) when a MySQL connection string is configured;
+// otherwise fall back to a local SQLite file for development.
+var connString = builder.Configuration.GetConnectionString("DefaultConnection");
+var isMySql = !string.IsNullOrEmpty(connString) && connString.Contains("Server=", StringComparison.OrdinalIgnoreCase);
 var sqlitePath = Path.Combine(builder.Environment.ContentRootPath, "ayis.db");
 var sqliteConnString = $"Data Source={sqlitePath}";
-builder.Services.AddSingleton<IDbConnectionFactory>(_ => new SqliteConnectionFactory(sqliteConnString));
+
+if (isMySql)
+{
+    builder.Services.AddSingleton<IDbConnectionFactory>(_ => new MySqlConnectionFactory(builder.Configuration));
+}
+else
+{
+    builder.Services.AddSingleton<IDbConnectionFactory>(_ => new SqliteConnectionFactory(sqliteConnString));
+}
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<FarmRepository>();
 builder.Services.AddScoped<CropRepository>();
@@ -25,7 +41,26 @@ builder.Services.AddHttpClient<AccuWeatherService>();
 builder.Services.AddHostedService<WeatherPollingService>();
 
 // 2. JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "AYIS_ULTRA_SECURE_SECRET_KEY_FOR_JWT_TOKEN_SIGNING_2026_CHANGE_IN_PROD!";
+// The signing key MUST be provided via the JWT_KEY environment variable in production.
+// A random 32+ char key is generated for development only — never use in production.
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrEmpty(jwtKey))
+{
+    jwtKey = builder.Configuration["JWT_KEY"];
+}
+
+if (string.IsNullOrEmpty(jwtKey))
+{
+    if (builder.Environment.IsProduction())
+    {
+        throw new InvalidOperationException(
+            "JWT signing key is not configured. Set the 'Jwt:Key' in appsettings.json or the 'JWT_KEY' environment variable (minimum 32 characters).");
+    }
+    // Development fallback — generate a random key so the app can start.
+    jwtKey = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+    Console.WriteLine("WARNING: Using auto-generated JWT key. This is INSECURE and must not be used in production.");
+}
+
 var keyBytes = Encoding.UTF8.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
@@ -50,13 +85,29 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // 3. CORS
+// Use specific origins from configuration. Never AllowAnyOrigin in production.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<List<string>>();
+if (allowedOrigins == null || allowedOrigins.Count == 0)
+{
+    allowedOrigins = new List<string> { "http://localhost:3000", "http://localhost:8080" };
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        if (builder.Environment.IsProduction())
+        {
+            policy.WithOrigins(allowedOrigins.ToArray())
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins.ToArray())
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
     });
 });
 
@@ -101,7 +152,7 @@ using (var scope = app.Services.CreateScope())
 
 app.UseCors("AllowFrontend");
 
-if (app.Environment.IsDevelopment() || true)
+if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "AYIS API v1"));

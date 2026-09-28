@@ -35,8 +35,9 @@ public class AccuWeatherService
         _http    = http;
         _cache   = cache;
         _logger  = logger;
-        _apiKey  = config["AccuWeather:ApiKey"]  ?? throw new InvalidOperationException("AccuWeather:ApiKey not configured.");
-        _baseUrl = config["AccuWeather:BaseUrl"] ?? "https://dataservice.accuweather.com";
+        _apiKey  = config["AccuWeather:ApiKey"]  ?? config["ACCUWEATHER_API_KEY"]
+                  ?? throw new InvalidOperationException("AccuWeather:ApiKey not configured. Set 'AccuWeather:ApiKey' in appsettings.json or the 'ACCUWEATHER_API_KEY' environment variable.");
+        _baseUrl = config["AccuWeather:BaseUrl"] ?? config["ACCUWEATHER_BASE_URL"] ?? "https://dataservice.accuweather.com";
 
         _http.BaseAddress = new Uri(_baseUrl);
         _http.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate");

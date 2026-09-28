@@ -101,34 +101,20 @@ export const api = {
   },
 
   // 5. Agronomic Intelligence & Recommendations (Database: `recommendations`)
-  async getRecommendations(fieldId) {
-    const endpoint = fieldId ? `/recommendations?fieldId=${fieldId}` : '/recommendations';
-    const live = await this.request(endpoint);
-    return Array.isArray(live) ? live : [];
-  },
-
-  async updateRecommendationStatus(id, status, notes = '') {
-    return await this.request(`/recommendations/${id}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status, notes })
-    });
-  },
-
-  // 6. Field Operations & Inspections (MySQL: `field_inspections`, `field_observations`)
-  // 5. Intelligence & Agronomic Recommendations (MySQL: `suitability_assessments`, `recommendations`)
   async getFieldSuitability(fieldId) {
     return await this.request(`/intelligence/suitability?fieldId=${encodeURIComponent(fieldId)}`);
   },
 
-  async getYieldPredictions(cycleId) {
-    return await this.request(`/intelligence/yield-predictions?cycleId=${encodeURIComponent(cycleId)}`);
-  },
-
   async getRecommendations(fieldId = null) {
-    const endpoint = fieldId 
+    const endpoint = fieldId
       ? `/recommendations?fieldId=${encodeURIComponent(fieldId)}`
       : '/recommendations';
-    return await this.request(endpoint);
+    const live = await this.request(endpoint);
+    return Array.isArray(live) ? live : [];
+  },
+
+  async getYieldPredictions(cycleId) {
+    return await this.request(`/intelligence/yield-predictions?cycleId=${encodeURIComponent(cycleId)}`);
   },
 
   // Scenario 1: Pre-Season Crop Selection
