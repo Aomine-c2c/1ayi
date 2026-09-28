@@ -1,0 +1,147 @@
+name: AYIS CI
+
+on:
+  push:
+    branches: ["main", "develop", "feature/**"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  # ── Backend: Build & Test ─────────────────────────────────────────────────
+  backend:
+    name: Backend (.NET 8)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore NuGet packages
+        run: dotnet restore backend/Ayis.Api/Ayis.Api.csproj
+
+      - name: Restore test project packages
+        run: dotnet restore backend/Ayis.Api.Tests/Ayis.Api.Tests.csproj
+
+      - name: Build API
+        run: dotnet build backend/Ayis.Api/Ayis.Api.csproj --no-restore --configuration Release
+
+      - name: Build Tests
+        run: dotnet build backend/Ayis.Api.Tests/Ayis.Api.Tests.csproj --no-restore --configuration Release
+
+      - name: Run Tests (with code coverage)
+        run: |
+          dotnet test backend/Ayis.Api.Tests/Ayis.Api.Tests.csproj \
+            --no-build \
+            --configuration Release \
+            --logger "trx;LogFileName=test-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-results
+          path: TestResults/
+
+      - name: Check for formatting issues
+        run: dotnet format backend/Ayis.Api/Ayis.Api.csproj --verify-no-changes --no-restore
+        continue-on-error: true   # advisory only until the codebase is fully formatted
+
+  # ── Frontend: Lint & Validate ─────────────────────────────────────────────
+  frontend:
+    name: Frontend (Vanilla JS)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install ESLint (zero-config)
+        run: npm install --no-save eslint @eslint/js globals
+
+      - name: Create ESLint config
+        run: |
+          cat > eslint.config.mjs << 'EOF'
+          import js from "@eslint/js";
+          import globals from "globals";
+          export default [
+            js.configs.recommended,
+            {
+              languageOptions: {
+                globals: { ...globals.browser, ...globals.es2022 }
+              },
+              rules: {
+                "no-unused-vars":  ["warn", { "argsIgnorePattern": "^_" }],
+                "no-undef":         "error",
+                "no-console":       "off",
+              }
+            }
+          ];
+          EOF
+
+      - name: Lint frontend JavaScript
+        run: npx eslint frontend/js/**/*.js frontend/js/*.js --max-warnings 50
+        continue-on-error: true   # advisory; tighten as technical debt is resolved
+
+      - name: Validate HTML
+        run: |
+          npm install --no-save html-validate
+          npx html-validate frontend/index.html
+        continue-on-error: true
+
+  # ── Security: Secrets Scan ────────────────────────────────────────────────
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # Full history for Gitleaks
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true   # Report but don't block while baseline is established
+
+  # ── Repository Hygiene ────────────────────────────────────────────────────
+  hygiene:
+    name: Repo Hygiene
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure no compiled binaries are committed
+        run: |
+          # Fail if any tracked file matches patterns that belong in .gitignore
+          FOUND=$(git ls-files '*.dll' '*.pdb' '*.db' '*.sqlite' | grep -v 'LICENSE' || true)
+          if [ -n "$FOUND" ]; then
+            echo "ERROR: Compiled binaries or database files detected in git:"
+            echo "$FOUND"
+            exit 1
+          fi
+          echo "✅ No compiled binaries committed."
+
+      - name: Check commit messages are not empty/generic
+        run: |
+          # Warn on single-character or trivially short commit messages on push
+          SHORT=$(git log --oneline -5 --format='%s' | awk 'length($0) < 5')
+          if [ -n "$SHORT" ]; then
+            echo "⚠️  Warning: Some recent commits have very short/generic messages:"
+            echo "$SHORT"
+          fi

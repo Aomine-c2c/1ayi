@@ -79,6 +79,7 @@ public class Crop
     public int SunlightHoursMin { get; set; }
     public string SuitableMonthsJson { get; set; } = "[]";
     public string? PlantingSeason { get; set; }
+    public bool IsActive { get; set; } = true;
 }
 
 public class CropVariety
@@ -281,3 +282,27 @@ public class FieldTaskItem
     public string AssignedTo { get; set; } = string.Empty;
     public string? Notes { get; set; }
 }
+
+// ── Request / Command DTOs ───────────────────────────────────────────────────
+
+/// <summary>Used by POST /api/v1/users to create a new user with a hashed password.</summary>
+public class CreateUserRequest
+{
+    public string  Username    { get; set; } = string.Empty;
+    public string  Email       { get; set; } = string.Empty;
+    public string  Password    { get; set; } = string.Empty;  // plain-text; hashed in endpoint
+    public string? FirstName   { get; set; }
+    public string? LastName    { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? Role        { get; set; }
+    public bool?   IsActive    { get; set; }
+    public bool?   IsStaff     { get; set; }
+}
+
+/// <summary>Used by PATCH /api/v1/users/{id}/password.</summary>
+public class ChangePasswordRequest
+{
+    public string? CurrentPassword { get; set; }  // Required for non-admin self-service
+    public string  NewPassword     { get; set; } = string.Empty;
+}
+

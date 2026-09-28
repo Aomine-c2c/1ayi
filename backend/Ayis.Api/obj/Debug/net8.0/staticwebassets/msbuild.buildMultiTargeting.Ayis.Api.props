@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="../build/Ayis.Api.props" />
-</Project>

@@ -116,6 +116,14 @@ public class UserRepository
         return affected > 0;
     }
 
+    public async Task<bool> UpdatePasswordAsync(string id, string newPasswordHash)
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"UPDATE users SET password_hash = @Hash, updated_at = datetime('now') WHERE id = @Id;";
+        var affected = await conn.ExecuteAsync(sql, new { Id = id, Hash = newPasswordHash });
+        return affected > 0;
+    }
+
     public async Task<bool> DeleteAsync(string id)
     {
         using var conn = _db.CreateConnection();

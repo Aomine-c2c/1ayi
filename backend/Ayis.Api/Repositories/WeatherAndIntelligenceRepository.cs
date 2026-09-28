@@ -13,7 +13,17 @@ public class WeatherAndIntelligenceRepository
         _db = db;
     }
 
-    public async Task<IEnumerable<WeatherObservation>> GetRecentObservationsAsync(int limit = 24)
+    public async Task<int> CreateWeatherObservationAsync(WeatherObservation obs)
+    {
+        using var conn = _db.CreateConnection();
+        var sql = @"
+            INSERT INTO weather_observations 
+            (id, station_id, timestamp, temperature_c, temp_min_c, temp_max_c, humidity_pct, rainfall_mm, wind_speed_kmh, solar_radiation_mj)
+            VALUES (@Id, @StationId, @Timestamp, @TemperatureC, @TempMinC, @TempMaxC, @HumidityPct, @RainfallMm, @WindSpeedKmh, @SolarRadiationMj);";
+        return await conn.ExecuteAsync(sql, obs);
+    }
+
+    public async Task(IEnumerable<WeatherObservation>> GetRecentObservationsAsync(int limit = 24)
     {
         using var conn = _db.CreateConnection();
         var sql = @"

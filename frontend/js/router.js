@@ -11,6 +11,7 @@ import { superAdminViews } from './roles/superAdminViews.js';
 import { authService } from './services/index.js';
 import { authViews } from './auth/authViews.js';
 import { ROLE_CONFIG } from './domain/models.js';
+import { ApiError } from './api.js';
 
 export function initRouter() {
   const contentArea = document.getElementById('contentViewport');
@@ -501,6 +502,18 @@ export function initRouter() {
   }
 
   window.addEventListener('hashchange', handleRoute);
+
+  // Global session-expiry handler — fired by api.js on any 401 response
+  window.addEventListener('ayis:session-expired', () => {
+    authService.logout();
+    updateNavbarAuthUI();
+    const contentArea = document.getElementById('contentViewport');
+    authViews.renderSignedOutView(contentArea);
+    authViews.showLoginModal(() => {
+      updateSidebarNavigation(authService.getCurrentRole());
+      handleRoute();
+    });
+  });
 
   // Initial render
   updateSidebarNavigation(authService.getCurrentRole());

@@ -46,6 +46,9 @@ cd "$API_DIR"
 echo "Restoring NuGet packages..."
 dotnet restore
 
+echo "Building AYIS Minimal API..."
+dotnet build --no-restore --configuration Debug -o "$API_DIR/bin/Debug/net8.0"
+
 echo "Launching AYIS Minimal API on http://localhost:$PORT..."
 echo "Swagger API spec available at: http://localhost:$PORT/swagger/v1/swagger.json"
 

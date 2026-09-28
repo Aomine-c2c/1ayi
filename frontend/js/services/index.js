@@ -187,95 +187,67 @@ export const authService = {
   async login({ emailOrUsername, password, rememberMe = true }) {
     const trimmed = (emailOrUsername || '').trim();
 
-    // Specific error test cases
-    if (trimmed.toLowerCase() === 'disabled@ayis.org' || trimmed.toLowerCase() === 'disabled') {
-      return {
-        success: false,
-        status: 'DISABLED',
-        message: 'Account Disabled: Your agricultural enterprise account has been temporarily deactivated by a system administrator. Please contact your county extension officer or administrator.'
-      };
+    if (!trimmed || !password) {
+      return { success: false, status: 'VALIDATION', message: 'Email/username and password are required.' };
     }
 
-    if (trimmed.toLowerCase() === 'locked@ayis.org' || trimmed.toLowerCase() === 'locked') {
-      return {
-        success: false,
-        status: 'LOCKED',
-        message: 'Account Locked: Multiple consecutive failed authentication attempts detected. Security cooldown active for 15 minutes.'
-      };
-    }
+    try {
+      const res = await api.request('/auth/token', {
+        method: 'POST',
+        body: JSON.stringify({ Username: trimmed, Password: password })
+      });
 
-    // Call live C# API database endpoint
-    const res = await api.request('/auth/token', {
-      method: 'POST',
-      body: JSON.stringify({
-        Username: trimmed,
-        Password: password
-      })
-    });
-
-    if (res && res.access_token) {
+      // Successful authentication
       api.setToken(res.access_token);
       const user = res.user;
       this.setCurrentRole(user.role || 'farmer');
-      const profile = {
-        id: user.id,
-        username: user.username,
-        firstName: user.first_name || user.firstName || '',
-        lastName: user.last_name || user.lastName || '',
-        email: user.email,
-        role: user.role,
-        avatar: user.role === 'farmer' ? '🚜' : (user.role === 'agronomist' ? '🌾' : '🌱')
+
+      const avatarMap = {
+        farmer: '🚜', agronomist: '🌾', farm_manager: '📋',
+        extension_officer: '👥', field_officer: '🔍',
+        weather_analyst: '📡', system_admin: '🔐', super_admin: '🏛️'
       };
-      localStorage.setItem('ayis_user_profile_' + user.role, JSON.stringify(profile));
+      const profile = {
+        id:        user.id,
+        username:  user.username,
+        firstName: user.first_name  || '',
+        lastName:  user.last_name   || '',
+        email:     user.email,
+        role:      user.role,
+        isStaff:   user.is_staff ?? false,
+        avatar:    avatarMap[user.role] || '🌱'
+      };
+
+      if (rememberMe) {
+        localStorage.setItem('ayis_user_profile_' + user.role, JSON.stringify(profile));
+      } else {
+        sessionStorage.setItem('ayis_user_profile_' + user.role, JSON.stringify(profile));
+      }
+
       return {
-        success: true,
-        token: res.access_token,
-        role: user.role,
-        user: profile,
+        success:     true,
+        token:       res.access_token,
+        role:        user.role,
+        user:        profile,
         isFirstLogin: this.isFirstLogin()
       };
+
+    } catch (err) {
+      // ApiError gives us a typed status code
+      if (err.name === 'ApiError') {
+        if (err.status === 401) {
+          return { success: false, status: 'INVALID_CREDENTIALS', message: 'Invalid email/username or password.' };
+        }
+        if (err.status === 403) {
+          return { success: false, status: 'DISABLED', message: err.body?.message || 'Account is disabled. Contact an administrator.' };
+        }
+        if (err.isNetworkError) {
+          return { success: false, status: 'NETWORK_ERROR', message: 'Cannot reach the AYIS server. Please check your connection or verify the backend is running.' };
+        }
+        return { success: false, status: 'SERVER_ERROR', message: `Server error (${err.status}): ${err.message}` };
+      }
+      return { success: false, status: 'UNKNOWN', message: err.message || 'An unexpected error occurred.' };
     }
-
-    // Role detection map for testing convenience
-    const roleMap = {
-      'farmer': 'farmer',
-      'john.kamau@farms.ke': 'farmer',
-      'agronomist': 'agronomist',
-      'sarah.mwangi@ayis.org': 'agronomist',
-      'extension': 'extension_officer',
-      'grace.wanjiku@ayis.org': 'extension_officer',
-      'weather': 'weather_analyst',
-      'daniel.kiprop@ayis.org': 'weather_analyst',
-      'manager': 'farm_manager',
-      'david.mwangi@estate.ke': 'farm_manager',
-      'admin': 'system_admin',
-      'alex.kipruto@ayis.org': 'system_admin',
-      'super': 'super_admin',
-      'chief@ayis.org': 'super_admin',
-      'field': 'field_officer',
-      'peter.koech@ayis.org': 'field_officer'
-    };
-
-    if (password === 'wrong' || password === 'invalid') {
-      return {
-        success: false,
-        status: 'INVALID_CREDENTIALS',
-        message: 'Invalid credentials: The email/username or password provided does not match our records.'
-      };
-    }
-
-    const targetRole = roleMap[trimmed.toLowerCase()] || 'agronomist';
-    const token = 'ayis_jwt_' + Math.random().toString(36).substring(2) + '_' + Date.now();
-    localStorage.setItem('ayis_token', token);
-    this.setCurrentRole(targetRole);
-
-    return {
-      success: true,
-      token,
-      role: targetRole,
-      user: this.getCurrentUser(),
-      isFirstLogin: this.isFirstLogin()
-    };
   },
 
   async forgotPassword(email) {

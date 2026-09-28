@@ -26,11 +26,18 @@ media/
 staticfiles/
 mediafiles/
 
+# .NET / C# build artifacts
+backend/Ayis.Api/bin/
+backend/Ayis.Api/obj/
+backend/Ayis.Api/ayis.db
+backend/Ayis.Api/*.db
+
 # Environment files — NEVER commit real secrets
 .env
 .env.local
 .env.production
 .env.*.local
+.env.development
 
 # IDE
 .vscode/
@@ -59,3 +66,33 @@ docker-compose.override.yml
 
 # Tauri
 src-tauri/target/
+
+# .NET build outputs — NEVER commit compiled artifacts
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# .NET test results
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# .NET publish output
+publish/
+
+# SQLite development databases — use seed.sql / SqliteDatabaseInitializer to recreate
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# NuGet packages (restored automatically)
+*.nupkg
+*.snupkg
+
+# Rider / JetBrains
+*.sln.iml
