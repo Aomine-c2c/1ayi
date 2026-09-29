@@ -113,7 +113,7 @@ public class CropCycle
 
 public class WeatherObservation
 {
-    public long Id { get; set; }
+    public string Id { get; set; } = Guid.NewGuid().ToString();
     public string StationId { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; }
     public decimal TemperatureC { get; set; }
@@ -305,4 +305,9 @@ public class ChangePasswordRequest
     public string? CurrentPassword { get; set; }  // Required for non-admin self-service
     public string  NewPassword     { get; set; } = string.Empty;
 }
+
+public record LoginRequest(string Username, string Password);
+public record TaskStatusRequest(string Status);
+public record UserStatusRequest(bool IsActive);
+
 

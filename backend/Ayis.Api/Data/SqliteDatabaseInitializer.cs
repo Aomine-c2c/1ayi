@@ -290,12 +290,24 @@ public static class SqliteDatabaseInitializer
         {
             SeedData(conn);
         }
+        else
+        {
+            // Upgrade any legacy plain-text password hashes
+            var legacyUsers = conn.Query<(string Id, string PasswordHash)>(
+                "SELECT id, password_hash AS PasswordHash FROM users WHERE password_hash NOT LIKE '$2%';");
+            foreach (var u in legacyUsers)
+            {
+                var hashed = BCrypt.Net.BCrypt.HashPassword(u.PasswordHash, 10);
+                conn.Execute("UPDATE users SET password_hash = @Hashed WHERE id = @Id;",
+                    new { Hashed = hashed, Id = u.Id });
+            }
+        }
     }
 
     private static void SeedData(IDbConnection conn)
     {
         // Users (Password: Password123!)
-        var pwHash = "Password123!";
+        var pwHash = BCrypt.Net.BCrypt.HashPassword("Password123!", 10);
         conn.Execute(@"
             INSERT INTO users (id, username, email, password_hash, first_name, last_name, phone_number, role, is_active, is_staff)
             VALUES 

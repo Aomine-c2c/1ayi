@@ -99,18 +99,15 @@ public class WeatherPollingService : BackgroundService
                 // Build and persist the observation record
                 var observation = new WeatherObservation
                 {
+                    Id              = $"wobs-{Guid.NewGuid():N}",
                     StationId       = $"farm-{farm.Id}",
                     Timestamp       = DateTime.UtcNow,
                     TemperatureC    = (decimal)conditions.Temperature.Value,
                     TempMinC        = null,
                     TempMaxC        = null,
-                    HumidityPct     = conditions.RelativeHumidity.HasValue
-                                        ? (decimal)conditions.RelativeHumidity.Value
-                                        : 0m,
-                    RainfallMm      = 0m, // Precipitation is in forecast; current conditions don't include it
-                    WindSpeedKmh    = conditions.Wind?.Speed?.Value.HasValue == true
-                                        ? (decimal?)conditions.Wind.Speed.Value.Value
-                                        : null,
+                    HumidityPct     = (decimal)conditions.RelativeHumidity,
+                    RainfallMm      = (decimal)conditions.PrecipitationLast24hMm,
+                    WindSpeedKmh    = conditions.Wind != null ? (decimal?)conditions.Wind.Speed : null,
                     SolarRadiationMj= null
                 };
 

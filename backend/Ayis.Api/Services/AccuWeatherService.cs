@@ -29,14 +29,21 @@ public class AccuWeatherService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    private bool IsApiKeyConfigured =>
+        !string.IsNullOrWhiteSpace(_apiKey) &&
+        !_apiKey.Equals("your-accuweather-api-key-here", StringComparison.OrdinalIgnoreCase);
+
     public AccuWeatherService(HttpClient http, IMemoryCache cache,
         IConfiguration config, ILogger<AccuWeatherService> logger)
     {
         _http    = http;
         _cache   = cache;
         _logger  = logger;
-        _apiKey  = config["AccuWeather:ApiKey"]  ?? config["ACCUWEATHER_API_KEY"]
-                  ?? throw new InvalidOperationException("AccuWeather:ApiKey not configured. Set 'AccuWeather:ApiKey' in appsettings.json or the 'ACCUWEATHER_API_KEY' environment variable.");
+        _apiKey  = config["AccuWeather:ApiKey"]  ?? config["ACCUWEATHER_API_KEY"] ?? string.Empty;
+        if (!IsApiKeyConfigured)
+        {
+            _logger.LogWarning("AccuWeather:ApiKey is not configured or is a placeholder. Telemetry fallback simulation will be used.");
+        }
         _baseUrl = config["AccuWeather:BaseUrl"] ?? config["ACCUWEATHER_BASE_URL"] ?? "https://dataservice.accuweather.com";
 
         _http.BaseAddress = new Uri(_baseUrl);
@@ -51,6 +58,13 @@ public class AccuWeatherService
         var cacheKey = $"loc:{lat:F4}:{lon:F4}";
         if (_cache.TryGetValue(cacheKey, out string? cachedKey))
             return cachedKey;
+
+        if (!IsApiKeyConfigured)
+        {
+            var fallbackKey = $"zw-loc-{(int)(Math.Abs(lat) * 100)}-{(int)(Math.Abs(lon) * 100)}";
+            _cache.Set(cacheKey, fallbackKey, LocationKeyTtl);
+            return fallbackKey;
+        }
 
         var url = $"/locations/v1/cities/geoposition/search?apikey={_apiKey}&q={lat},{lon}&toplevel=true";
         try
@@ -93,6 +107,13 @@ public class AccuWeatherService
 
         var locationKey = await GetLocationKeyAsync(lat, lon);
         if (locationKey == null) return GenerateMockCurrentConditions(lat, lon, "zw-mock");
+
+        if (!IsApiKeyConfigured)
+        {
+            var mock = GenerateMockCurrentConditions(lat, lon, locationKey);
+            _cache.Set(cacheKey, mock, CurrentConditionsTtl);
+            return mock;
+        }
 
         var url = $"/currentconditions/v1/{locationKey}?apikey={_apiKey}&details=true&metric=true";
         try
@@ -174,6 +195,13 @@ public class AccuWeatherService
         var locationKey = await GetLocationKeyAsync(lat, lon);
         if (locationKey == null) locationKey = $"zw-loc-{(int)(Math.Abs(lat) * 100)}";
 
+        if (!IsApiKeyConfigured)
+        {
+            var mock = GenerateMockForecast(lat, lon);
+            _cache.Set(cacheKey, mock, ForecastTtl);
+            return mock;
+        }
+
         var url = $"/forecasts/v1/daily/5day/{locationKey}?apikey={_apiKey}&metric=true&details=true";
         try
         {
@@ -235,6 +263,12 @@ public class AccuWeatherService
         var cacheKey = $"alerts:{lat:F4}:{lon:F4}";
         if (_cache.TryGetValue(cacheKey, out List<AccuWeatherAlert>? cached))
             return cached!;
+
+        if (!IsApiKeyConfigured)
+        {
+            _cache.Set(cacheKey, new List<AccuWeatherAlert>(), AlertsTtl);
+            return [];
+        }
 
         var locationKey = await GetLocationKeyAsync(lat, lon);
         if (locationKey == null) locationKey = "zw-mock-alert";

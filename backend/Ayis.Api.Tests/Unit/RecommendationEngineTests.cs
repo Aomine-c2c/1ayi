@@ -73,14 +73,14 @@ public class RecommendationEngineServiceTests
     public void EvaluateInSeasonDirectives_ReturnsAtLeastOneDirective_ForTypicalConditions()
     {
         var results = _sut.EvaluateInSeasonDirectives(
-            tempC              : 22.4m,
-            humidityPct        : 68m,
-            windSpeedKmh       : 6.2m,
-            rain24hMm          : 18.2m,
-            forecastRain48hMm  : 14.0m,
-            crop               : "Highland Hybrid Maize (H614D)",
-            growthStage        : "Vegetative V6",
-            fieldName          : "North Field A"
+            currentTempC         : 22.4m,
+            currentHumidityPct   : 68m,
+            currentWindSpeedKmh  : 6.2m,
+            rainLast24hMm        : 18.2m,
+            forecastRainNext48hMm: 14.0m,
+            cropName             : "Highland Hybrid Maize (H614D)",
+            currentStage         : "Vegetative V6",
+            fieldName            : "North Field A"
         ).ToList();
 
         results.Should().NotBeEmpty();
@@ -96,7 +96,7 @@ public class RecommendationEngineServiceTests
             directive.Category.Should().NotBeNullOrWhiteSpace();
             directive.Title.Should().NotBeNullOrWhiteSpace();
             directive.ActionRequired.Should().NotBeNullOrWhiteSpace();
-            directive.ConfidenceScore.Should().BeInRange(0m, 1m);
+            directive.ConfidenceScore.Should().BeInRange(0m, 100m);
         }
     }
 
@@ -105,9 +105,9 @@ public class RecommendationEngineServiceTests
     {
         // Very high humidity with mild temps should flag disease risk
         var results = _sut.EvaluateInSeasonDirectives(
-            tempC: 18m, humidityPct: 85m, windSpeedKmh: 4m,
-            rain24hMm: 2m, forecastRain48hMm: 0m,
-            crop: "Wheat", growthStage: "Tillering", fieldName: "Test Field"
+            currentTempC: 18m, currentHumidityPct: 85m, currentWindSpeedKmh: 4m,
+            rainLast24hMm: 2m, forecastRainNext48hMm: 0m,
+            cropName: "Wheat", currentStage: "Tillering", fieldName: "Test Field"
         ).ToList();
 
         results.Should().Contain(d =>

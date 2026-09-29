@@ -22,7 +22,8 @@ builder.Configuration.AddEnvironmentVariables();
 // Uses MySQL 8 when DefaultConnection contains "Server="; otherwise SQLite (dev).
 var connString  = builder.Configuration.GetConnectionString("DefaultConnection");
 var isMySql     = !string.IsNullOrEmpty(connString)
-                  && connString.Contains("Server=", StringComparison.OrdinalIgnoreCase);
+                  && connString.Contains("Server=", StringComparison.OrdinalIgnoreCase)
+                  && !connString.Contains("your_db_password", StringComparison.OrdinalIgnoreCase);
 var sqlitePath  = Path.Combine(builder.Environment.ContentRootPath, "ayis.db");
 var sqliteConn  = $"Data Source={sqlitePath}";
 
@@ -172,12 +173,8 @@ app.MapWeatherEndpoints();
 app.MapIntelligenceEndpoints();
 app.MapOperationsEndpoints();
 
-// ── Shared Record Types (used across endpoints) ───────────────────────────────
-// Kept here so they remain accessible to all endpoint modules via top-level statements.
-
 app.Run();
 
-// ── Global Request Record Types ───────────────────────────────────────────────
-public record LoginRequest(string Username, string Password);
-public record TaskStatusRequest(string Status);
-public record UserStatusRequest(bool IsActive);
+// Expose Program class for WebApplicationFactory in test projects
+public partial class Program { }
+

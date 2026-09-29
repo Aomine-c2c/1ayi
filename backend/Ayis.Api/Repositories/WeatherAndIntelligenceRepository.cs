@@ -23,7 +23,7 @@ public class WeatherAndIntelligenceRepository
         return await conn.ExecuteAsync(sql, obs);
     }
 
-    public async Task(IEnumerable<WeatherObservation>> GetRecentObservationsAsync(int limit = 24)
+    public async Task<IEnumerable<WeatherObservation>> GetRecentObservationsAsync(int limit = 24)
     {
         using var conn = _db.CreateConnection();
         var sql = @"

@@ -14,33 +14,35 @@ namespace Ayis.Api.Tests.Integration;
 /// </summary>
 public class UserRepositoryTests : IDisposable
 {
-    private readonly SqliteConnection _conn;
-    private readonly UserRepository   _repo;
+    private readonly string _dbPath;
+    private readonly UserRepository _repo;
 
     public UserRepositoryTests()
     {
-        // Shared in-memory connection — must stay open for the lifetime of the test
-        _conn = new SqliteConnection("Data Source=:memory:");
-        _conn.Open();
+        _dbPath = Path.Combine(Path.GetTempPath(), $"ayis_test_{Guid.NewGuid():N}.db");
+        var connStr = $"Data Source={_dbPath}";
 
-        // Bootstrap schema
-        _conn.Execute(@"
-            CREATE TABLE users (
-                id           TEXT PRIMARY KEY,
-                username     TEXT NOT NULL UNIQUE,
-                email        TEXT NOT NULL UNIQUE,
-                password_hash TEXT NOT NULL,
-                first_name   TEXT DEFAULT '',
-                last_name    TEXT DEFAULT '',
-                phone_number TEXT,
-                role         TEXT DEFAULT 'farmer',
-                is_active    INTEGER DEFAULT 1,
-                is_staff     INTEGER DEFAULT 0,
-                created_at   TEXT DEFAULT (datetime('now')),
-                updated_at   TEXT DEFAULT (datetime('now'))
-            );");
+        using (var bootstrapConn = new SqliteConnection(connStr))
+        {
+            bootstrapConn.Open();
+            bootstrapConn.Execute(@"
+                CREATE TABLE users (
+                    id           TEXT PRIMARY KEY,
+                    username     TEXT NOT NULL UNIQUE,
+                    email        TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    first_name   TEXT DEFAULT '',
+                    last_name    TEXT DEFAULT '',
+                    phone_number TEXT,
+                    role         TEXT DEFAULT 'farmer',
+                    is_active    INTEGER DEFAULT 1,
+                    is_staff     INTEGER DEFAULT 0,
+                    created_at   TEXT DEFAULT (datetime('now')),
+                    updated_at   TEXT DEFAULT (datetime('now'))
+                );");
+        }
 
-        var factory = new SingleConnectionFactory(_conn);
+        var factory = new SqliteConnectionFactory(connStr);
         _repo       = new UserRepository(factory);
     }
 
@@ -174,15 +176,12 @@ public class UserRepositoryTests : IDisposable
         IsStaff      = false
     };
 
-    public void Dispose() => _conn.Dispose();
-}
-
-/// <summary>
-/// Adapter so the repository can use a pre-existing connection (for in-memory SQLite).
-/// </summary>
-file class SingleConnectionFactory : IDbConnectionFactory
-{
-    private readonly System.Data.IDbConnection _conn;
-    public SingleConnectionFactory(System.Data.IDbConnection conn) => _conn = conn;
-    public System.Data.IDbConnection CreateConnection() => _conn;
+    public void Dispose()
+    {
+        SqliteConnection.ClearAllPools();
+        if (File.Exists(_dbPath))
+        {
+            try { File.Delete(_dbPath); } catch { /* ignore */ }
+        }
+    }
 }
