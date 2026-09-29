@@ -311,6 +311,127 @@ async function runAudit() {
     const isAgroRecsClean = !agroRecs.includes('Failed to render view') && !agroRecs.includes('soilMoisture');
     console.log(`  ✓ Agronomic Recommendations Hub: ${isAgroRecsClean ? 'Rendered successfully with complete edaphic & meteorological data' : 'Failed'}`);
 
+    // Sign out Agronomist
+    await dismissModalIfActive(page);
+    await page.click('#btnTopSignOut');
+    await page.waitForTimeout(1000);
+    console.log('  ✓ Agronomist signed out cleanly');
+
+    // ── 5. Extension Officer Role Audit ─────────────────────────────────────
+    console.log('\n[5/7] Testing Extension Officer Role (gracew / Password123!) ...');
+    const signInBtnExt = await page.$('#btnTopSignIn');
+    if (signInBtnExt && await signInBtnExt.isVisible()) {
+      await signInBtnExt.click();
+    } else {
+      await page.evaluate(() => { window.location.hash = '#login'; });
+    }
+    await page.waitForSelector('#loginForm', { timeout: 5000 });
+    await page.click('#btnDemo_gracew');
+    await page.waitForFunction(() => !!localStorage.getItem('ayis_token'), { timeout: 8000 });
+    console.log('  ✓ Extension Officer Authenticated via 1-Click Demo Card!');
+    await page.waitForTimeout(500);
+    await dismissModalIfActive(page);
+
+    await page.evaluate(() => { window.location.hash = '#dashboard'; });
+    await page.waitForTimeout(1500);
+    const extDash = await page.$eval('#contentViewport', el => el.innerText);
+    console.log(`  ✓ Extension Officer Dashboard rendered (${extDash.length} chars)`);
+
+    await page.evaluate(() => { window.location.hash = '#farmers'; });
+    await page.waitForTimeout(1500);
+    const extFarmers = await page.$eval('#contentViewport', el => el.innerText);
+    console.log(`  ✓ Extension Officer Farmers directory rendered (${extFarmers.length} chars)`);
+
+    await page.evaluate(() => { window.location.hash = '#field-visits'; });
+    await page.waitForTimeout(1500);
+    const extVisits = await page.$eval('#contentViewport', el => el.innerText);
+    console.log(`  ✓ Extension Officer Field Visits view rendered (${extVisits.length} chars)`);
+
+    await dismissModalIfActive(page);
+    await page.click('#btnTopSignOut');
+    await page.waitForTimeout(1000);
+    console.log('  ✓ Extension Officer signed out cleanly');
+
+    // ── 6. Weather Analyst Role Audit ───────────────────────────────────────
+    console.log('\n[6/7] Testing Weather Analyst Role (danielk / Password123!) ...');
+    const signInBtnWeather = await page.$('#btnTopSignIn');
+    if (signInBtnWeather && await signInBtnWeather.isVisible()) {
+      await signInBtnWeather.click();
+    } else {
+      await page.evaluate(() => { window.location.hash = '#login'; });
+    }
+    await page.waitForSelector('#loginForm', { timeout: 5000 });
+    await page.click('#btnDemo_danielk');
+    await page.waitForFunction(() => !!localStorage.getItem('ayis_token'), { timeout: 8000 });
+    console.log('  ✓ Weather Analyst Authenticated via 1-Click Demo Card!');
+    await page.waitForTimeout(500);
+    await dismissModalIfActive(page);
+
+    await page.evaluate(() => { window.location.hash = '#dashboard'; });
+    await page.waitForTimeout(1500);
+    const weatherDash = await page.$eval('#contentViewport', el => el.innerText);
+    console.log(`  ✓ Weather Analyst Dashboard rendered (${weatherDash.length} chars)`);
+
+    await page.evaluate(() => { window.location.hash = '#live-weather'; });
+    await page.waitForTimeout(1500);
+    const liveWeather = await page.$eval('#contentViewport', el => el.innerText);
+    console.log(`  ✓ Weather Analyst Live Weather view rendered (${liveWeather.length} chars)`);
+
+    await page.evaluate(() => { window.location.hash = '#weather-trends'; });
+    await page.waitForTimeout(1500);
+    const weatherTrends = await page.$eval('#contentViewport', el => el.innerText);
+    console.log(`  ✓ Weather Analyst Trends view rendered (${weatherTrends.length} chars)`);
+
+    await page.evaluate(() => { window.location.hash = '#data-quality'; });
+    await page.waitForTimeout(1500);
+    const dataQuality = await page.$eval('#contentViewport', el => el.innerText);
+    console.log(`  ✓ Weather Analyst Data Quality view rendered (${dataQuality.length} chars)`);
+
+    await dismissModalIfActive(page);
+    await page.click('#btnTopSignOut');
+    await page.waitForTimeout(1000);
+    console.log('  ✓ Weather Analyst signed out cleanly');
+
+    // ── 7. Farm Manager Role Audit ──────────────────────────────────────────
+    console.log('\n[7/7] Testing Farm Manager Role (davidm / Password123!) ...');
+    const signInBtnMgr = await page.$('#btnTopSignIn');
+    if (signInBtnMgr && await signInBtnMgr.isVisible()) {
+      await signInBtnMgr.click();
+    } else {
+      await page.evaluate(() => { window.location.hash = '#login'; });
+    }
+    await page.waitForSelector('#loginForm', { timeout: 5000 });
+    await page.click('#btnDemo_davidm');
+    await page.waitForFunction(() => !!localStorage.getItem('ayis_token'), { timeout: 8000 });
+    console.log('  ✓ Farm Manager Authenticated via 1-Click Demo Card!');
+    await page.waitForTimeout(500);
+    await dismissModalIfActive(page);
+
+    await page.evaluate(() => { window.location.hash = '#dashboard'; });
+    await page.waitForTimeout(1500);
+    const mgrDash = await page.$eval('#contentViewport', el => el.innerText);
+    console.log(`  ✓ Farm Manager Dashboard rendered (${mgrDash.length} chars)`);
+
+    await page.evaluate(() => { window.location.hash = '#fields'; });
+    await page.waitForTimeout(1500);
+    const mgrFields = await page.$eval('#contentViewport', el => el.innerText);
+    console.log(`  ✓ Farm Manager Fields view rendered (${mgrFields.length} chars)`);
+
+    await page.evaluate(() => { window.location.hash = '#cycles'; });
+    await page.waitForTimeout(1500);
+    const mgrCycles = await page.$eval('#contentViewport', el => el.innerText);
+    console.log(`  ✓ Farm Manager Crop Cycles view rendered (${mgrCycles.length} chars)`);
+
+    await page.evaluate(() => { window.location.hash = '#field-operations'; });
+    await page.waitForTimeout(1500);
+    const mgrOps = await page.$eval('#contentViewport', el => el.innerText);
+    console.log(`  ✓ Farm Manager Field Operations view rendered (${mgrOps.length} chars)`);
+
+    await dismissModalIfActive(page);
+    await page.click('#btnTopSignOut');
+    await page.waitForTimeout(1000);
+    console.log('  ✓ Farm Manager signed out cleanly');
+
     console.log('\n====================================================');
     console.log('   Audit Results Summary                            ');
     console.log('====================================================');

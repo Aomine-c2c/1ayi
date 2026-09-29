@@ -12,12 +12,12 @@ public static class UserEndpoints
         // All user-management routes require authentication
         var group = app.MapGroup("/api/v1/users").RequireAuthorization();
 
-        // GET /api/v1/users — List all users (admin only)
+        // GET /api/v1/users — List all users (admin, extension & field operations)
         group.MapGet("/", async (UserRepository repo) =>
         {
             var users = await repo.GetAllAsync();
             return Results.Ok(users);
-        }).RequireAuthorization(p => p.RequireRole("admin", "super_admin", "system_admin"))
+        }).RequireAuthorization(p => p.RequireRole("admin", "super_admin", "system_admin", "extension_officer", "field_officer", "agronomist"))
           .WithName("GetUsers").WithTags("Users");
 
         // GET /api/v1/users/{id}
