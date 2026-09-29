@@ -476,14 +476,28 @@ export const farmerViews = {
   // 4. WEATHER & PLAIN-LANGUAGE FORECAST
   // =========================================================================
   async weather(container) {
+    const effLoc = await weatherService.resolveEffectiveLocation();
     const weather = await weatherService.getRecentObservations();
     const forecasts = await weatherService.getForecasts();
     const latest = weather[weather.length - 1] || { temp: 22.4, humidity: 68, rain: 0.0, wind: 6.2 };
+
+    const locLabel = effLoc.source === 'gps'
+      ? `📍 Current Location (${effLoc.lat.toFixed(2)}°, ${effLoc.lon.toFixed(2)}°)`
+      : `📍 ${effLoc.name}`;
+    const badgeType = effLoc.source === 'gps' ? 'badge-green' : 'badge-blue';
 
     container.innerHTML = `
       ${ui.breadcrumbs([{ label: 'My Farm Assistant', hash: '#dashboard' }, { label: 'Weather & Forecast' }])}
 
       <div class="panel" style="padding: 24px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span class="badge ${badgeType}" id="activeFarmerWeatherLocBadge" style="font-weight: 700;">${locLabel}</span>
+            <button class="btn btn-sm btn-secondary" id="btnRefreshFarmerWeatherGps" style="padding: 3px 10px; font-size: 0.75rem; border-radius: 999px;">
+              🔄 Detect / Refresh GPS
+            </button>
+          </div>
+        </div>
         <h1 style="font-size: 1.5rem; font-weight: 900; color: var(--text-primary);">Hyper-Local Agrometeorological Weather</h1>
         <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 4px;">
           Plain-language agricultural weather insights to help you decide when to plant, spray, irrigate, or harvest.
@@ -543,6 +557,15 @@ export const farmerViews = {
 
     setTimeout(() => {
       renderWeatherChart('farmerWeatherTrendChart', weather);
+      const btnRefresh = container.querySelector('#btnRefreshFarmerWeatherGps');
+      if (btnRefresh) {
+        btnRefresh.addEventListener('click', async () => {
+          btnRefresh.disabled = true;
+          btnRefresh.textContent = '⏳ Detecting GPS...';
+          await weatherService.resolveEffectiveLocation(true);
+          farmerViews.weather(container);
+        });
+      }
     }, 50);
   },
 

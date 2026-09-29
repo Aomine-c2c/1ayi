@@ -769,14 +769,28 @@ export const views = {
 
   // 5. Agrometeorological Weather Telemetry
   async weather(container) {
+    const effLoc = await weatherService.resolveEffectiveLocation();
     const weather = await weatherService.getRecentObservations();
     const forecasts = await weatherService.getForecasts();
     const alerts = await weatherService.getAlerts();
+
+    const locLabel = effLoc.source === 'gps'
+      ? `📍 Current Location (${effLoc.lat.toFixed(2)}°, ${effLoc.lon.toFixed(2)}°)`
+      : `📍 ${effLoc.name}`;
+    const badgeType = effLoc.source === 'gps' ? 'badge-green' : 'badge-blue';
 
     container.innerHTML = `
       ${ui.breadcrumbs([{ label: 'Platform Hub', hash: '#dashboard' }, { label: 'Agrometeorological Telemetry' }])}
 
       <div class="panel" style="padding: 24px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span class="badge ${badgeType}" id="activePlatformWeatherLocBadge" style="font-weight: 700;">${locLabel}</span>
+            <button class="btn btn-sm btn-secondary" id="btnRefreshPlatformWeatherGps" style="padding: 3px 10px; font-size: 0.75rem; border-radius: 999px;">
+              🔄 Detect / Refresh GPS
+            </button>
+          </div>
+        </div>
         <h1 style="font-size: 1.5rem; font-weight: 900; color: var(--text-primary);">Agrometeorological Telemetry & Synoptic Forecast</h1>
         <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 4px;">
           Live observations ingested from regional weather stations with precipitation, solar radiation, and GDD metrics
@@ -792,7 +806,7 @@ export const views = {
 
       <div class="panel" style="padding: 24px; margin-bottom: 24px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h3 style="font-size: 1.1rem; font-weight: 800;">Harare Central [ZW-HRE] 24h Diurnal Curve</h3>
+          <h3 style="font-size: 1.1rem; font-weight: 800;">${effLoc.name} 24h Diurnal Curve</h3>
           <span class="badge badge-green">Live Sensor Telemetry</span>
         </div>
         <div class="chart-canvas-container" style="height: 320px;">
@@ -848,7 +862,18 @@ export const views = {
       </div>
     `;
 
-    setTimeout(() => renderWeatherChart('weatherFullChart', weather), 50);
+    setTimeout(() => {
+      renderWeatherChart('weatherFullChart', weather);
+      const btnRefresh = container.querySelector('#btnRefreshPlatformWeatherGps');
+      if (btnRefresh) {
+        btnRefresh.addEventListener('click', async () => {
+          btnRefresh.disabled = true;
+          btnRefresh.textContent = '⏳ Detecting GPS...';
+          await weatherService.resolveEffectiveLocation(true);
+          views.weather(container);
+        });
+      }
+    }, 50);
   },
 
   // 6. Suitability & Yield Intelligence Engine

@@ -326,6 +326,12 @@ async function runAudit() {
     if (!isAgroWeatherClean) {
       throw new Error(`Weather intelligence view failed to render: ${agroWeather}`);
     }
+    const locBadgeExists = await page.$('#activeWeatherLocBadge');
+    const refreshBtnExists = await page.$('#btnRefreshWeatherGps');
+    if (locBadgeExists && refreshBtnExists) {
+      const locText = await locBadgeExists.innerText();
+      console.log(`  ✓ Weather Location Resolution: Active badge "${locText}" and GPS refresh button verified`);
+    }
 
     // Sign out Agronomist
     await dismissModalIfActive(page);

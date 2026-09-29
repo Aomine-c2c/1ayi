@@ -5,6 +5,7 @@
  * can replace mock implementations seamlessly.
  */
 import { api } from '../api.js';
+import { getCurrentPosition } from './geolocationService.js';
 
 // 1. Authentication & Session Service
 export const authService = {
@@ -490,9 +491,20 @@ export const cropService = {
 };
 
 // 4. Weather & Climate Service — Powered by AccuWeather
-// Default location: Harare, Zimbabwe (used when no farm GPS is available)
-const DEFAULT_LAT = -17.8252;
-const DEFAULT_LON = 31.0335;
+// Default location: Harare, Zimbabwe (used when no farm GPS or user location is available)
+export const DEFAULT_ZIMBABWE_LOCATION = {
+  lat: -17.8252,
+  lon: 31.0335,
+  name: 'Harare, Zimbabwe',
+  region: 'Mashonaland East',
+  source: 'default'
+};
+
+const DEFAULT_LAT = DEFAULT_ZIMBABWE_LOCATION.lat;
+const DEFAULT_LON = DEFAULT_ZIMBABWE_LOCATION.lon;
+
+const LOCATION_STORAGE_KEY = 'ayis_weather_location';
+const LOCATION_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 /**
  * Normalise an AccuWeather DailyForecast object to the UI's expected forecast shape.
@@ -565,14 +577,87 @@ function normaliseCurrentConditions(cc, id, name, region, lat, lon) {
 
 export const weatherService = {
   /**
-   * Get current conditions for the default Zimbabwe location.
-   * Falls through to backend DB observations if API is unavailable.
+   * Resolve user's effective weather location:
+   * 1. Checks cached location in localStorage (TTL 30 min).
+   * 2. Attempts navigator GPS detection (with 4s timeout for fast responsiveness).
+   * 3. Falls back gracefully to Harare, Zimbabwe.
+   * @param {boolean} forceRefresh - If true, ignores cache and requests GPS
+   * @returns {Promise<{lat: number, lon: number, name: string, region: string, source: 'gps'|'cache'|'default'}>}
    */
-  async getRecentObservations() {
+  async resolveEffectiveLocation(forceRefresh = false) {
+    if (!forceRefresh) {
+      try {
+        const cachedStr = localStorage.getItem(LOCATION_STORAGE_KEY);
+        if (cachedStr) {
+          const cached = JSON.parse(cachedStr);
+          if (cached && cached.lat != null && cached.lon != null) {
+            const age = Date.now() - (cached.timestamp || 0);
+            if (age < LOCATION_CACHE_TTL_MS) {
+              return { ...cached, source: 'cache' };
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[weatherService] Failed to read cached location', e);
+      }
+    }
+
     try {
-      const cc = await api.getWeatherCurrent(DEFAULT_LAT, DEFAULT_LON);
+      const pos = await getCurrentPosition({ timeout: 4000, maximumAge: 60000 });
+      if (pos && typeof pos.lat === 'number' && typeof pos.lon === 'number') {
+        const loc = {
+          lat: pos.lat,
+          lon: pos.lon,
+          name: `Current Location (${pos.lat.toFixed(2)}°, ${pos.lon.toFixed(2)}°)`,
+          region: 'Local Device GPS',
+          source: 'gps',
+          timestamp: Date.now()
+        };
+        try {
+          localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(loc));
+        } catch (_) {}
+        return loc;
+      }
+    } catch (e) {
+      console.info('[weatherService] GPS unavailable or denied, falling back to Zimbabwe (Harare):', e.message);
+    }
+
+    return { ...DEFAULT_ZIMBABWE_LOCATION, timestamp: Date.now() };
+  },
+
+  /**
+   * Clear cached location so next request forces GPS refresh.
+   */
+  clearCachedLocation() {
+    try {
+      localStorage.removeItem(LOCATION_STORAGE_KEY);
+    } catch (_) {}
+  },
+
+  /**
+   * Get current conditions for a GPS location (or resolved current location / Zimbabwe).
+   * Falls through to backend DB observations if API is unavailable.
+   * @param {number} [lat]
+   * @param {number} [lon]
+   */
+  async getRecentObservations(lat, lon) {
+    let resolvedLat = lat;
+    let resolvedLon = lon;
+    let locLabel = 'Harare Central (AccuWeather)';
+    let locRegion = 'Mashonaland East';
+
+    if (resolvedLat == null || resolvedLon == null) {
+      const eff = await this.resolveEffectiveLocation();
+      resolvedLat = eff.lat;
+      resolvedLon = eff.lon;
+      locLabel = eff.name;
+      locRegion = eff.region;
+    }
+
+    try {
+      const cc = await api.getWeatherCurrent(resolvedLat, resolvedLon);
       if (cc && cc.temperature) {
-        return [normaliseCurrentConditions(cc, 'stn-hre', 'Harare Central (AccuWeather)', 'Mashonaland East', DEFAULT_LAT, DEFAULT_LON)];
+        return [normaliseCurrentConditions(cc, 'stn-active', locLabel, locRegion, resolvedLat, resolvedLon)];
       }
     } catch (e) {
       console.warn('[weatherService] AccuWeather current conditions unavailable, falling back to DB.', e);
@@ -596,13 +681,22 @@ export const weatherService = {
   },
 
   /**
-   * Get 5-day daily forecast for a GPS location.
-   * @param {number} lat
-   * @param {number} lon
+   * Get 5-day daily forecast for a GPS location (or resolved current location / Zimbabwe).
+   * @param {number} [lat]
+   * @param {number} [lon]
    */
-  async getForecasts(lat = DEFAULT_LAT, lon = DEFAULT_LON) {
+  async getForecasts(lat, lon) {
+    let resolvedLat = lat;
+    let resolvedLon = lon;
+
+    if (resolvedLat == null || resolvedLon == null) {
+      const eff = await this.resolveEffectiveLocation();
+      resolvedLat = eff.lat;
+      resolvedLon = eff.lon;
+    }
+
     try {
-      const result = await api.getWeatherForecast(lat, lon);
+      const result = await api.getWeatherForecast(resolvedLat, resolvedLon);
       if (result && result.dailyForecasts && result.dailyForecasts.length > 0) {
         const list = result.dailyForecasts.map(normaliseDailyForecast);
         list.headline = result.headline ?? '';
@@ -626,13 +720,22 @@ export const weatherService = {
   },
 
   /**
-   * Get active weather alerts for a GPS location.
-   * @param {number} lat
-   * @param {number} lon
+   * Get active weather alerts for a GPS location (or resolved current location / Zimbabwe).
+   * @param {number} [lat]
+   * @param {number} [lon]
    */
-  async getAlerts(lat = DEFAULT_LAT, lon = DEFAULT_LON) {
+  async getAlerts(lat, lon) {
+    let resolvedLat = lat;
+    let resolvedLon = lon;
+
+    if (resolvedLat == null || resolvedLon == null) {
+      const eff = await this.resolveEffectiveLocation();
+      resolvedLat = eff.lat;
+      resolvedLon = eff.lon;
+    }
+
     try {
-      const alerts = await api.getWeatherAlerts(lat, lon);
+      const alerts = await api.getWeatherAlerts(resolvedLat, resolvedLon);
       if (Array.isArray(alerts)) {
         return alerts.map((a, i) => ({
           id: `aw-alert-${a.alertId ?? i}`,
@@ -738,10 +841,21 @@ export const weatherService = {
   /**
    * Climate trends — derived from forecast data where possible.
    * AccuWeather Climatology endpoints are on paid tiers.
+   * @param {number} [lat]
+   * @param {number} [lon]
    */
-  async getClimateTrends(lat = DEFAULT_LAT, lon = DEFAULT_LON) {
+  async getClimateTrends(lat, lon) {
+    let resolvedLat = lat;
+    let resolvedLon = lon;
+
+    if (resolvedLat == null || resolvedLon == null) {
+      const eff = await this.resolveEffectiveLocation();
+      resolvedLat = eff.lat;
+      resolvedLon = eff.lon;
+    }
+
     try {
-      const forecast = await api.getWeatherForecast(lat, lon);
+      const forecast = await api.getWeatherForecast(resolvedLat, resolvedLon);
       if (forecast && forecast.dailyForecasts && forecast.dailyForecasts.length > 0) {
         const days = forecast.dailyForecasts;
         const avgTemp = days.reduce((s, d) => s + ((d.tempMaxC + d.tempMinC) / 2), 0) / days.length;

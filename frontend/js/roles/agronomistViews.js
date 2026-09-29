@@ -820,9 +820,15 @@ export const agronomistViews = {
   // 6. WEATHER INTELLIGENCE
   // =========================================================================
   async weatherIntelligence(container) {
+    const effLoc = await weatherService.resolveEffectiveLocation();
     const weather = await weatherService.getRecentObservations();
     const forecasts = await weatherService.getForecasts();
     const quality = await weatherService.getDataQualityMetrics();
+
+    const locLabel = effLoc.source === 'gps'
+      ? `📍 Current Location (${effLoc.lat.toFixed(2)}°, ${effLoc.lon.toFixed(2)}°)`
+      : `📍 ${effLoc.name}`;
+    const badgeType = effLoc.source === 'gps' ? 'badge-green' : 'badge-blue';
 
     container.innerHTML = `
       ${ui.breadcrumbs([{ label: 'Agronomic Intelligence Hub', hash: '#dashboard' }, { label: 'Weather Intelligence' }])}
@@ -830,7 +836,13 @@ export const agronomistViews = {
       <div class="panel" style="padding: 24px; margin-bottom: 24px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
           <div>
-            <span class="badge badge-green">AGROMETEOROLOGICAL TELEMETRY</span>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
+              <span class="badge badge-green">AGROMETEOROLOGICAL TELEMETRY</span>
+              <span class="badge ${badgeType}" id="activeWeatherLocBadge" style="font-weight: 700;">${locLabel}</span>
+              <button class="btn btn-sm btn-secondary" id="btnRefreshWeatherGps" style="padding: 3px 10px; font-size: 0.75rem; border-radius: 999px;">
+                🔄 Detect / Refresh GPS
+              </button>
+            </div>
             <h1 style="font-size: 1.65rem; font-weight: 900; color: var(--text-primary); margin-top: 4px;">Synoptic Weather Intelligence & Microclimate</h1>
             <p style="color: var(--text-muted); font-size: 0.875rem;">
               Automated weather station networks, 24-hour diurnal curves, growing degree days (GDD), and agricultural 5-day forecasts.
@@ -871,6 +883,15 @@ export const agronomistViews = {
 
     setTimeout(() => {
       renderWeatherChart('agronomistWeatherChart', weather);
+      const btnRefresh = container.querySelector('#btnRefreshWeatherGps');
+      if (btnRefresh) {
+        btnRefresh.addEventListener('click', async () => {
+          btnRefresh.disabled = true;
+          btnRefresh.textContent = '⏳ Detecting GPS...';
+          await weatherService.resolveEffectiveLocation(true);
+          agronomistViews.weatherIntelligence(container);
+        });
+      }
     }, 60);
   },
 
