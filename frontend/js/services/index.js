@@ -190,7 +190,17 @@ export const authService = {
   async getDemoUsers() {
     try {
       const data = await api.request('/auth/demo-users');
-      return Array.isArray(data) ? data : [];
+      if (Array.isArray(data)) {
+        return data.map(u => ({
+          id: u.id ?? u.Id,
+          username: u.username ?? u.Username,
+          role: u.role ?? u.Role,
+          firstName: u.firstName ?? u.FirstName ?? '',
+          lastName: u.lastName ?? u.LastName ?? '',
+          email: u.email ?? u.Email ?? ''
+        }));
+      }
+      return [];
     } catch (e) {
       console.warn('[authService] Unable to fetch demo users from backend DB API:', e);
       return [];

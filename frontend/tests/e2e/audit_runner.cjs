@@ -79,8 +79,14 @@ async function runAudit() {
     
     // Verify 1-Click Preconfigured Demo Cards
     await page.waitForSelector('#demoPersonaGrid', { timeout: 3000 });
+    await page.waitForTimeout(500); // allow dynamic db fetch to complete
+    const demoCardsText = await page.$eval('#demoPersonaGrid', el => el.innerText);
+    const hasUndefinedCards = demoCardsText.includes('undefined');
     const demoCardCount = await page.$$eval('.demo-user-btn', els => els.length);
-    console.log(`  ✓ 1-Click Demo Persona Grid mounted with ${demoCardCount} preconfigured role cards`);
+    console.log(`  ✓ 1-Click Demo Persona Grid mounted with ${demoCardCount} preconfigured role cards (${hasUndefinedCards ? '⚠️ contains undefined' : 'Clean titles & names'})`);
+    if (hasUndefinedCards) {
+      throw new Error('Demo persona cards contained "undefined" label!');
+    }
 
     // Click 1-Click Demo Card for Admin
     console.log('  ℹ Clicking 1-Click Demo Login card for System Admin (#btnDemo_admin)...');

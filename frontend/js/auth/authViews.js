@@ -88,14 +88,19 @@ export const authViews = {
               </div>
               <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;" id="demoPersonaGrid">
                 ${currentDemoUsers.map(u => {
-                  const meta = roleMeta[u.role] || { title: u.role, icon: '🌱' };
-                  const displayName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.username;
+                  const roleKey = (u.role || u.Role || '').toLowerCase();
+                  const meta = roleMeta[roleKey] || roleMeta[u.role] || roleMeta[u.Role] || { title: u.role || u.Role || 'User', icon: '🌱' };
+                  const firstName = u.firstName || u.FirstName || '';
+                  const lastName = u.lastName || u.LastName || '';
+                  const username = u.username || u.Username || '';
+                  const displayName = `${firstName} ${lastName}`.trim() || username;
+                  const shortName = firstName || displayName.split(' ')[0] || username;
                   return `
                   <button 
                     type="button" 
                     class="demo-user-btn" 
-                    id="btnDemo_${u.username}"
-                    data-username="${u.username}" 
+                    id="btnDemo_${username}"
+                    data-username="${username}" 
                     data-password="Password123!" 
                     data-role="${meta.title}"
                     data-name="${displayName}"
@@ -108,7 +113,7 @@ export const authViews = {
                         ${meta.title}
                       </div>
                       <div style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        ${u.username} · ${displayName.split(' ')[0]}
+                        ${username} · ${shortName}
                       </div>
                     </div>
                   </button>
