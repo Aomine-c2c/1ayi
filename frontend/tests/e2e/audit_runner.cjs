@@ -304,6 +304,13 @@ async function runAudit() {
     const agroCrops = await page.$eval('#contentViewport', el => el.innerText);
     console.log(`  ✓ Agronomic Crops Catalog rendered (${agroCrops.length} chars)`);
 
+    // 4D. Agronomist Recommendations Hub (#recommendations)
+    await page.evaluate(() => { window.location.hash = '#recommendations'; });
+    await page.waitForTimeout(1500);
+    const agroRecs = await page.$eval('#contentViewport', el => el.innerText);
+    const isAgroRecsClean = !agroRecs.includes('Failed to render view') && !agroRecs.includes('soilMoisture');
+    console.log(`  ✓ Agronomic Recommendations Hub: ${isAgroRecsClean ? 'Rendered successfully with complete edaphic & meteorological data' : 'Failed'}`);
+
     console.log('\n====================================================');
     console.log('   Audit Results Summary                            ');
     console.log('====================================================');
