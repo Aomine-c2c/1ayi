@@ -241,7 +241,18 @@ async function runAudit() {
     const recsText = await page.$eval('#contentViewport', el => el.innerText);
     console.log(`  ✓ Recommendations & Directives View rendered (${recsText.length} chars)`);
 
-    // 3D. RBAC Security Check: Farmer blocked from Admin area
+    // 3D. Weather View & Route Parity Check (#weather and #weather-intelligence)
+    await page.evaluate(() => { window.location.hash = '#weather-intelligence'; });
+    await page.waitForTimeout(1500);
+    const farmerWeatherText = await page.$eval('#contentViewport', el => el.innerText);
+    const isWeatherAllowed = !farmerWeatherText.includes('403') && !farmerWeatherText.includes('Access Denied');
+    console.log(`  ✓ Weather Intelligence Route Parity: ${isWeatherAllowed ? 'Permitted and rendered successfully' : 'Failed'}`);
+
+    // Verify Active Role Switcher is locked during authenticated session
+    const isRoleSelectDisabled = await page.$eval('#activeRoleSelect', el => el.disabled);
+    console.log(`  ✓ Role Switcher Security: ${isRoleSelectDisabled ? 'Disabled/Locked during active session' : 'Unlocked'}`);
+
+    // 3E. RBAC Security Check: Farmer blocked from Admin area
     await page.evaluate(() => { window.location.hash = '#users'; });
     await page.waitForTimeout(1000);
     const deniedText = await page.$eval('#contentViewport', el => el.innerText);

@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using Dapper;
+using Ayis.Api.Data;
 using Ayis.Api.Models;
 using Ayis.Api.Repositories;
 using Ayis.Api.Services;
@@ -62,6 +64,36 @@ public static class AuthEndpoints
                 created_at  = user.CreatedAt
             }) : Results.NotFound();
         }).RequireAuthorization().WithName("GetCurrentUser").WithTags("Auth");
+
+        // GET /api/v1/auth/demo-users — Preconfigured personas from the database
+        app.MapGet("/api/v1/auth/demo-users", async (IDbConnectionFactory db) =>
+        {
+            using var conn = db.CreateConnection();
+            var sql = @"
+                SELECT 
+                    id, 
+                    username, 
+                    first_name AS FirstName, 
+                    last_name AS LastName, 
+                    email AS Email, 
+                    role AS Role
+                FROM users 
+                WHERE username IN ('chief', 'admin', 'alexk', 'sarahm', 'gracew', 'danielk', 'davidm', 'johnk', 'alicec', 'peterk')
+                ORDER BY 
+                  CASE role 
+                    WHEN 'farmer' THEN 1 
+                    WHEN 'agronomist' THEN 2 
+                    WHEN 'system_admin' THEN 3 
+                    WHEN 'extension_officer' THEN 4 
+                    WHEN 'weather_analyst' THEN 5 
+                    WHEN 'farm_manager' THEN 6 
+                    WHEN 'field_officer' THEN 7 
+                    WHEN 'super_admin' THEN 8 
+                    ELSE 9 
+                  END;";
+            var users = await conn.QueryAsync(sql);
+            return Results.Ok(users);
+        }).AllowAnonymous().WithName("GetDemoUsers").WithTags("Auth");
 
         return app;
     }

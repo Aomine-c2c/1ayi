@@ -184,6 +184,19 @@ export const authService = {
     return { success: true, user: updatedProfile };
   },
 
+  /**
+   * Fetch preconfigured demo personas directly from the backend database
+   */
+  async getDemoUsers() {
+    try {
+      const data = await api.request('/auth/demo-users');
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      console.warn('[authService] Unable to fetch demo users from backend DB API:', e);
+      return [];
+    }
+  },
+
   async login({ emailOrUsername, password, rememberMe = true }) {
     const trimmed = (emailOrUsername || '').trim();
 

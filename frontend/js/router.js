@@ -30,7 +30,14 @@ export function initRouter() {
     const menuUserEmail = document.getElementById('menuUserEmail');
 
     const currentUser = authService.getCurrentUser();
-    const config = ROLE_CONFIG[authService.getCurrentRole()] || ROLE_CONFIG.super_admin;
+    const currentRole = authService.getCurrentRole();
+    const config = ROLE_CONFIG[currentRole] || ROLE_CONFIG.super_admin;
+
+    if (roleSelect) {
+      roleSelect.value = currentRole;
+      roleSelect.disabled = isLoggedIn;
+      roleSelect.title = isLoggedIn ? 'Active role is bound to the authenticated account' : 'Select preview role';
+    }
 
     if (btnSignIn) btnSignIn.style.display = isLoggedIn ? 'none' : 'inline-flex';
     if (btnSignOut) btnSignOut.style.display = isLoggedIn ? 'inline-flex' : 'none';
@@ -72,6 +79,9 @@ export function initRouter() {
     
     const hash = window.location.hash || '#';
     const currentRole = authService.getCurrentRole();
+
+    // Ensure sidebar always reflects the active user role
+    updateSidebarNavigation(currentRole);
 
     // Update active state in sidebar
     document.querySelectorAll('.nav-link').forEach(link => {
@@ -132,7 +142,7 @@ export function initRouter() {
         ]),
         farmer: new Set([
           'dashboard', 'my-farms', 'farms', 'crops', 'my-crops', 'weather', 'live-weather', 'weather-trends',
-          'recommendations', 'intelligence', 'yield', 'yield-estimates', 'alerts', 'weather-alerts',
+          'weather-intelligence', 'recommendations', 'intelligence', 'yield', 'yield-estimates', 'alerts', 'weather-alerts',
           'farm-map', 'map', 'profile', 'search', 'help', 'about', 'login', 'forgot-password', 'reset-password', 'onboarding'
         ])
       };
@@ -180,6 +190,7 @@ export function initRouter() {
           'weather': farmerViews.weather,
           'live-weather': farmerViews.weather,
           'weather-trends': farmerViews.weather,
+          'weather-intelligence': farmerViews.weather,
           'recommendations': farmerViews.recommendations,
           'yield': farmerViews.yield,
           'yield-estimates': farmerViews.yield,

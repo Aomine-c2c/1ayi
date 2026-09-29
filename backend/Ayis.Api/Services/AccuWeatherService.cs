@@ -29,6 +29,8 @@ public class AccuWeatherService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
+    public const string DefaultHardcodedApiKey = "zpka_ea3355b1c3cd4e6ea815609220688db3_81064c74a";
+
     private bool IsApiKeyConfigured =>
         !string.IsNullOrWhiteSpace(_apiKey) &&
         !_apiKey.Equals("your-accuweather-api-key-here", StringComparison.OrdinalIgnoreCase);
@@ -39,7 +41,10 @@ public class AccuWeatherService
         _http    = http;
         _cache   = cache;
         _logger  = logger;
-        _apiKey  = config["AccuWeather:ApiKey"]  ?? config["ACCUWEATHER_API_KEY"] ?? string.Empty;
+        var keyFromConfig = config["AccuWeather:ApiKey"] ?? config["ACCUWEATHER_API_KEY"];
+        _apiKey  = (!string.IsNullOrWhiteSpace(keyFromConfig) && !keyFromConfig.Equals("your-accuweather-api-key-here", StringComparison.OrdinalIgnoreCase))
+            ? keyFromConfig
+            : DefaultHardcodedApiKey;
         if (!IsApiKeyConfigured)
         {
             _logger.LogWarning("AccuWeather:ApiKey is not configured or is a placeholder. Telemetry fallback simulation will be used.");

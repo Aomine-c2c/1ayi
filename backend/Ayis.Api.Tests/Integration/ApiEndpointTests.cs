@@ -70,6 +70,18 @@ public class ApiEndpointTests : IClassFixture<AyisApiFactory>
     }
 
     [Fact]
+    public async Task GetDemoUsers_Returns200_WithDatabaseSeededUsers()
+    {
+        var response = await _client.GetAsync("/api/v1/auth/demo-users");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("admin");
+        content.Should().Contain("johnk");
+        content.Should().Contain("sarahm");
+    }
+
+    [Fact]
     public async Task CropsEndpoint_WithoutToken_Returns401()
     {
         var response = await _client.GetAsync("/api/v1/crops");

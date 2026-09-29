@@ -33,6 +33,29 @@ export const authViews = {
       document.body.appendChild(overlay);
     }
 
+    const roleMeta = {
+      farmer: { title: 'Farmer', icon: '🌾' },
+      agronomist: { title: 'Agronomist', icon: '🔬' },
+      system_admin: { title: 'System Admin', icon: '🛡️' },
+      extension_officer: { title: 'Extension Officer', icon: '🤝' },
+      weather_analyst: { title: 'Weather Analyst', icon: '⛅' },
+      farm_manager: { title: 'Farm Manager', icon: '🚜' },
+      field_officer: { title: 'Field Officer', icon: '📋' },
+      super_admin: { title: 'Super Admin', icon: '👑' }
+    };
+
+    // Preconfigured database users (seeded in SQLite users table)
+    let currentDemoUsers = [
+      { role: 'farmer', username: 'johnk', firstName: 'John', lastName: 'Kamau' },
+      { role: 'agronomist', username: 'sarahm', firstName: 'Dr. Sarah', lastName: 'Mwangi' },
+      { role: 'system_admin', username: 'admin', firstName: 'System', lastName: 'Administrator' },
+      { role: 'extension_officer', username: 'gracew', firstName: 'Grace', lastName: 'Wanjiku' },
+      { role: 'weather_analyst', username: 'danielk', firstName: 'Daniel', lastName: 'Kiprop' },
+      { role: 'farm_manager', username: 'davidm', firstName: 'David', lastName: 'Mwangi' },
+      { role: 'field_officer', username: 'peterk', firstName: 'Peter', lastName: 'Koech' },
+      { role: 'super_admin', username: 'chief', firstName: 'Chief', lastName: 'Agrotechnologist' }
+    ];
+
     const renderLoginForm = (errorMsg = '', alertType = 'critical', isSubmitting = false) => {
       overlay.innerHTML = `
         <div class="modal-window" role="dialog" aria-modal="true" style="max-width: 520px; width: 100%;">
@@ -55,47 +78,42 @@ export const authViews = {
               </div>
             ` : ''}
 
-            <!-- 1-Click Preconfigured Demo Personas Grid -->
+            <!-- 1-Click Preconfigured Demo Personas Grid (Queried from SQLite Database) -->
             <div style="margin-bottom: 18px; padding: 12px 14px; background: var(--bg-primary); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                 <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 5px;">
                   ⚡ Quick 1-Click Demo Login
                 </span>
-                <span style="font-size: 0.68rem; color: var(--text-muted);">Select preconfigured role</span>
+                <span style="font-size: 0.68rem; color: var(--text-muted);">Database-seeded accounts</span>
               </div>
               <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;" id="demoPersonaGrid">
-                ${[
-                  { role: 'Farmer', name: 'John Kamau', user: 'johnk', icon: '🌾' },
-                  { role: 'Agronomist', name: 'Dr. Sarah Mwangi', user: 'sarahm', icon: '🔬' },
-                  { role: 'System Admin', name: 'Administrator', user: 'admin', icon: '🛡️' },
-                  { role: 'Extension Officer', name: 'Grace Wanjiku', user: 'gracew', icon: '🤝' },
-                  { role: 'Weather Analyst', name: 'Daniel Kiprop', user: 'danielk', icon: '⛅' },
-                  { role: 'Farm Manager', name: 'David Mwangi', user: 'davidm', icon: '🚜' },
-                  { role: 'Field Officer', name: 'Peter Koech', user: 'peterk', icon: '📋' },
-                  { role: 'Super Admin', name: 'Chief Agro', user: 'chief', icon: '👑' }
-                ].map(p => `
+                ${currentDemoUsers.map(u => {
+                  const meta = roleMeta[u.role] || { title: u.role, icon: '🌱' };
+                  const displayName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.username;
+                  return `
                   <button 
                     type="button" 
                     class="demo-user-btn" 
-                    id="btnDemo_${p.user}"
-                    data-username="${p.user}" 
+                    id="btnDemo_${u.username}"
+                    data-username="${u.username}" 
                     data-password="Password123!" 
-                    data-role="${p.role}"
-                    data-name="${p.name}"
+                    data-role="${meta.title}"
+                    data-name="${displayName}"
                     ${isSubmitting ? 'disabled' : ''}
-                    title="1-Click Login as ${p.name} (${p.role})"
+                    title="1-Click Login from Database: ${displayName} (${meta.title})"
                   >
-                    <span style="font-size: 1.15rem; line-height: 1; flex-shrink: 0;">${p.icon}</span>
+                    <span style="font-size: 1.15rem; line-height: 1; flex-shrink: 0;">${meta.icon}</span>
                     <div style="min-width: 0; flex: 1;">
                       <div style="font-size: 0.78rem; font-weight: 800; color: var(--text-primary); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        ${p.role}
+                        ${meta.title}
                       </div>
                       <div style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        ${p.user} · ${p.name.split(' ')[0]}
+                        ${u.username} · ${displayName.split(' ')[0]}
                       </div>
                     </div>
                   </button>
-                `).join('')}
+                  `;
+                }).join('')}
               </div>
             </div>
 
@@ -270,6 +288,16 @@ export const authViews = {
     };
 
     renderLoginForm();
+
+    // Dynamically fetch seeded accounts from SQLite database API and refresh grid
+    authService.getDemoUsers().then(dbUsers => {
+      if (Array.isArray(dbUsers) && dbUsers.length > 0 && overlay.classList.contains('active')) {
+        currentDemoUsers = dbUsers;
+        renderLoginForm();
+      }
+    }).catch(err => {
+      console.warn('[authViews] Demo users database fetch fallback:', err);
+    });
   },
 
   // =========================================================================
