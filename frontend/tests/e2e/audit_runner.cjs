@@ -76,14 +76,20 @@ async function runAudit() {
     }
 
     await page.waitForSelector('#loginForm', { timeout: 5000 });
-    await page.fill('#loginInputUser', 'admin');
-    await page.fill('#loginInputPass', 'Password123!');
-    await page.click('#btnSubmitLogin');
+    
+    // Verify 1-Click Preconfigured Demo Cards
+    await page.waitForSelector('#demoPersonaGrid', { timeout: 3000 });
+    const demoCardCount = await page.$$eval('.demo-user-btn', els => els.length);
+    console.log(`  ✓ 1-Click Demo Persona Grid mounted with ${demoCardCount} preconfigured role cards`);
+
+    // Click 1-Click Demo Card for Admin
+    console.log('  ℹ Clicking 1-Click Demo Login card for System Admin (#btnDemo_admin)...');
+    await page.click('#btnDemo_admin');
 
     // Wait for login token and dismiss FTUE if active
     await page.waitForFunction(() => !!localStorage.getItem('ayis_token'), { timeout: 8000 });
     const adminToken = await page.evaluate(() => localStorage.getItem('ayis_token'));
-    console.log(`  ✓ Admin Authenticated! (JWT: ${adminToken.substring(0, 20)}...)`);
+    console.log(`  ✓ Admin Authenticated via 1-Click Demo Card! (JWT: ${adminToken.substring(0, 20)}...)`);
     await page.waitForTimeout(500);
     await dismissModalIfActive(page);
 
@@ -129,12 +135,13 @@ async function runAudit() {
     }
 
     await page.waitForSelector('#loginForm', { timeout: 5000 });
-    await page.fill('#loginInputUser', 'johnk');
-    await page.fill('#loginInputPass', 'Password123!');
-    await page.click('#btnSubmitLogin');
+    
+    // Click 1-Click Demo Card for Farmer John
+    console.log('  ℹ Clicking 1-Click Demo Login card for Farmer (#btnDemo_johnk)...');
+    await page.click('#btnDemo_johnk');
 
     await page.waitForFunction(() => !!localStorage.getItem('ayis_token'), { timeout: 8000 });
-    console.log('  ✓ Farmer Authenticated!');
+    console.log('  ✓ Farmer Authenticated via 1-Click Demo Card!');
     await page.waitForTimeout(500);
     await dismissModalIfActive(page);
 
@@ -258,12 +265,13 @@ async function runAudit() {
     }
 
     await page.waitForSelector('#loginForm', { timeout: 5000 });
-    await page.fill('#loginInputUser', 'sarahm');
-    await page.fill('#loginInputPass', 'Password123!');
-    await page.click('#btnSubmitLogin');
+    
+    // Click 1-Click Demo Card for Agronomist Sarah
+    console.log('  ℹ Clicking 1-Click Demo Login card for Agronomist (#btnDemo_sarahm)...');
+    await page.click('#btnDemo_sarahm');
 
     await page.waitForFunction(() => !!localStorage.getItem('ayis_token'), { timeout: 8000 });
-    console.log('  ✓ Agronomist Authenticated!');
+    console.log('  ✓ Agronomist Authenticated via 1-Click Demo Card!');
     await page.waitForTimeout(500);
     await dismissModalIfActive(page);
 

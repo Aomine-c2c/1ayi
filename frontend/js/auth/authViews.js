@@ -35,7 +35,7 @@ export const authViews = {
 
     const renderLoginForm = (errorMsg = '', alertType = 'critical', isSubmitting = false) => {
       overlay.innerHTML = `
-        <div class="modal-window" role="dialog" aria-modal="true" style="max-width: 440px;">
+        <div class="modal-window" role="dialog" aria-modal="true" style="max-width: 520px; width: 100%;">
           <div class="modal-header">
             <div>
               <div style="display: flex; align-items: center; gap: 6px;">
@@ -47,7 +47,7 @@ export const authViews = {
             <button class="modal-close-btn" id="loginCloseBtn" aria-label="Close dialog">&times;</button>
           </div>
           
-          <form id="loginForm" class="modal-body" style="padding-top: 16px;">
+          <div class="modal-body" style="padding-top: 16px;">
             ${errorMsg ? `
               <div role="alert" style="background: ${alertType === 'warning' ? 'var(--accent-amber-light)' : 'var(--accent-rose-light)'}; border: 1px solid ${alertType === 'warning' ? '#fcd34d' : '#fda4af'}; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 16px; font-size: 0.8125rem; color: ${alertType === 'warning' ? 'var(--accent-amber)' : 'var(--accent-rose)'}; display: flex; align-items: flex-start; gap: 8px;">
                 <span style="font-size: 1.1rem; line-height: 1;">${alertType === 'warning' ? '⚠️' : '🚨'}</span>
@@ -55,75 +55,128 @@ export const authViews = {
               </div>
             ` : ''}
 
-            <div class="form-group">
-              <label class="form-label" for="loginInputUser">Email Address or Username</label>
-              <input 
-                class="form-input" 
-                id="loginInputUser" 
-                name="emailOrUsername" 
-                type="text" 
-                placeholder="e.g. sarah.mwangi@ayis.org or farmer" 
-                value="sarah.mwangi@ayis.org"
-                required
-                ${isSubmitting ? 'disabled' : ''}
-              >
-              <span class="form-hint">Tip: test 'disabled@ayis.org' for disabled state or 'locked@ayis.org' for locked state.</span>
+            <!-- 1-Click Preconfigured Demo Personas Grid -->
+            <div style="margin-bottom: 18px; padding: 12px 14px; background: var(--bg-primary); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 5px;">
+                  ⚡ Quick 1-Click Demo Login
+                </span>
+                <span style="font-size: 0.68rem; color: var(--text-muted);">Select preconfigured role</span>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;" id="demoPersonaGrid">
+                ${[
+                  { role: 'Farmer', name: 'John Kamau', user: 'johnk', icon: '🌾' },
+                  { role: 'Agronomist', name: 'Dr. Sarah Mwangi', user: 'sarahm', icon: '🔬' },
+                  { role: 'System Admin', name: 'Administrator', user: 'admin', icon: '🛡️' },
+                  { role: 'Extension Officer', name: 'Grace Wanjiku', user: 'gracew', icon: '🤝' },
+                  { role: 'Weather Analyst', name: 'Daniel Kiprop', user: 'danielk', icon: '⛅' },
+                  { role: 'Farm Manager', name: 'David Mwangi', user: 'davidm', icon: '🚜' },
+                  { role: 'Field Officer', name: 'Peter Koech', user: 'peterk', icon: '📋' },
+                  { role: 'Super Admin', name: 'Chief Agro', user: 'chief', icon: '👑' }
+                ].map(p => `
+                  <button 
+                    type="button" 
+                    class="demo-user-btn" 
+                    id="btnDemo_${p.user}"
+                    data-username="${p.user}" 
+                    data-password="Password123!" 
+                    data-role="${p.role}"
+                    data-name="${p.name}"
+                    ${isSubmitting ? 'disabled' : ''}
+                    title="1-Click Login as ${p.name} (${p.role})"
+                  >
+                    <span style="font-size: 1.15rem; line-height: 1; flex-shrink: 0;">${p.icon}</span>
+                    <div style="min-width: 0; flex: 1;">
+                      <div style="font-size: 0.78rem; font-weight: 800; color: var(--text-primary); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        ${p.role}
+                      </div>
+                      <div style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        ${p.user} · ${p.name.split(' ')[0]}
+                      </div>
+                    </div>
+                  </button>
+                `).join('')}
+              </div>
             </div>
 
-            <div class="form-group">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <label class="form-label" for="loginInputPass" style="margin-bottom: 0;">Password</label>
-                <button type="button" id="btnForgotPassLink" style="background: transparent; border: none; font-size: 0.75rem; font-weight: 700; color: var(--primary-dark); cursor: pointer; text-decoration: underline;">
-                  Forgot Password?
-                </button>
-              </div>
-              <div style="position: relative;">
+            <div style="position: relative; text-align: center; margin: 16px 0 14px;">
+              <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 0;">
+              <span style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); background: var(--bg-secondary); padding: 0 10px; font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">
+                Or Sign In Manually
+              </span>
+            </div>
+
+            <form id="loginForm">
+              <div class="form-group">
+                <label class="form-label" for="loginInputUser">Email Address or Username</label>
                 <input 
                   class="form-input" 
-                  id="loginInputPass" 
-                  name="password" 
-                  type="password" 
-                  value="Password123!" 
-                  style="padding-right: 44px;"
+                  id="loginInputUser" 
+                  name="emailOrUsername" 
+                  type="text" 
+                  placeholder="e.g. sarah.mwangi@ayis.org or farmer" 
+                  value="sarah.mwangi@ayis.org"
                   required
                   ${isSubmitting ? 'disabled' : ''}
                 >
+                <span class="form-hint">Tip: test 'disabled@ayis.org' for disabled state or 'locked@ayis.org' for locked state.</span>
+              </div>
+
+              <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <label class="form-label" for="loginInputPass" style="margin-bottom: 0;">Password</label>
+                  <button type="button" id="btnForgotPassLink" style="background: transparent; border: none; font-size: 0.75rem; font-weight: 700; color: var(--primary-dark); cursor: pointer; text-decoration: underline;">
+                    Forgot Password?
+                  </button>
+                </div>
+                <div style="position: relative;">
+                  <input 
+                    class="form-input" 
+                    id="loginInputPass" 
+                    name="password" 
+                    type="password" 
+                    value="Password123!" 
+                    style="padding-right: 44px;"
+                    required
+                    ${isSubmitting ? 'disabled' : ''}
+                  >
+                  <button 
+                    type="button" 
+                    id="btnToggleLoginPass" 
+                    style="position: absolute; right: 10px; top: 10px; background: transparent; border: none; cursor: pointer; color: var(--text-muted); font-size: 1rem;" 
+                    aria-label="Toggle password visibility"
+                  >
+                    👁️
+                  </button>
+                </div>
+                <span class="form-hint">Tip: test password 'wrong' to trigger invalid credentials state.</span>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.8125rem; color: var(--text-secondary);">
+                  <input type="checkbox" id="loginRememberMe" name="rememberMe" checked ${isSubmitting ? 'disabled' : ''}>
+                  Remember this device
+                </label>
+              </div>
+
+              <div style="margin-top: 20px;">
                 <button 
-                  type="button" 
-                  id="btnToggleLoginPass" 
-                  style="position: absolute; right: 10px; top: 10px; background: transparent; border: none; cursor: pointer; color: var(--text-muted); font-size: 1rem;" 
-                  aria-label="Toggle password visibility"
+                  type="submit" 
+                  class="btn btn-primary" 
+                  id="btnSubmitLogin" 
+                  style="width: 100%; justify-content: center; padding: 11px 16px; font-size: 0.95rem;"
+                  ${isSubmitting ? 'disabled' : ''}
                 >
-                  👁️
+                  ${isSubmitting ? `
+                    <span style="display: inline-flex; align-items: center; gap: 8px;">
+                      <span class="status-dot" style="animation: pulse 0.8s infinite;"></span>
+                      Verifying Credentials...
+                    </span>
+                  ` : 'Sign In to AYIS'}
                 </button>
               </div>
-              <span class="form-hint">Tip: test password 'wrong' to trigger invalid credentials state.</span>
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px;">
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.8125rem; color: var(--text-secondary);">
-                <input type="checkbox" id="loginRememberMe" name="rememberMe" checked ${isSubmitting ? 'disabled' : ''}>
-                Remember this device
-              </label>
-            </div>
-
-            <div style="margin-top: 24px;">
-              <button 
-                type="submit" 
-                class="btn btn-primary" 
-                id="btnSubmitLogin" 
-                style="width: 100%; justify-content: center; padding: 11px 16px; font-size: 0.95rem;"
-                ${isSubmitting ? 'disabled' : ''}
-              >
-                ${isSubmitting ? `
-                  <span style="display: inline-flex; align-items: center; gap: 8px;">
-                    <span class="status-dot" style="animation: pulse 0.8s infinite;"></span>
-                    Verifying Credentials...
-                  </span>
-                ` : 'Sign In to AYIS'}
-              </button>
-            </div>
-          </form>
+            </form>
+          </div>
 
           <div style="padding: 12px 24px 18px; border-top: 1px solid var(--border-subtle); background: var(--bg-primary); text-align: center; font-size: 0.8125rem; color: var(--text-muted);">
             New farmer or producer? 
@@ -157,17 +210,9 @@ export const authViews = {
         authViews.showFarmerOnboardingWizard(onSuccess);
       });
 
-      // Submit handler
-      const form = overlay.querySelector('#loginForm');
-      form.onsubmit = async (e) => {
-        e.preventDefault();
-        const userInput = form.querySelector('#loginInputUser').value;
-        const passVal = passInput.value;
-        const rememberVal = form.querySelector('#loginRememberMe').checked;
-
-        // Render loading state
+      // Common login execution helper
+      const executeLogin = async (userInput, passVal, rememberVal = true) => {
         renderLoginForm('', '', true);
-
         const result = await authService.login({
           emailOrUsername: userInput,
           password: passVal,
@@ -176,11 +221,9 @@ export const authViews = {
 
         if (result.success) {
           overlay.classList.remove('active');
-          // Update sidebar navigation and active role UI
           const activeRoleSelect = document.getElementById('activeRoleSelect');
           if (activeRoleSelect) activeRoleSelect.value = result.role;
 
-          // Check if first-time user login
           if (result.isFirstLogin) {
             authViews.showFirstTimeUserModal(result.user, () => {
               if (onSuccess) onSuccess();
@@ -191,10 +234,38 @@ export const authViews = {
             window.location.hash = '#dashboard';
           }
         } else {
-          // Render specific error states (Disabled, Locked, Invalid)
           const isWarning = result.status === 'LOCKED';
           renderLoginForm(result.message, isWarning ? 'warning' : 'critical', false);
         }
+      };
+
+      // Bind 1-Click Demo Login Persona Cards
+      const demoBtns = overlay.querySelectorAll('.demo-user-btn');
+      demoBtns.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          if (btn.disabled) return;
+          const username = btn.dataset.username;
+          const password = btn.dataset.password;
+          
+          // Provide instant feedback in inputs
+          const userInput = overlay.querySelector('#loginInputUser');
+          const passInput = overlay.querySelector('#loginInputPass');
+          if (userInput) userInput.value = username;
+          if (passInput) passInput.value = password;
+
+          await executeLogin(username, password, true);
+        });
+      });
+
+      // Submit handler for manual form
+      const form = overlay.querySelector('#loginForm');
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        const userInput = form.querySelector('#loginInputUser').value;
+        const passVal = passInput.value;
+        const rememberVal = form.querySelector('#loginRememberMe').checked;
+        await executeLogin(userInput, passVal, rememberVal);
       };
     };
 

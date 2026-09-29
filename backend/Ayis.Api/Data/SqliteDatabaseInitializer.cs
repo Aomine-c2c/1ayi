@@ -284,9 +284,12 @@ public static class SqliteDatabaseInitializer
 
         conn.Execute(ddl);
 
-        // 2. Seed Data if empty
-        var userCount = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM users;");
-        if (userCount == 0)
+        // 2. Ensure default preconfigured demo users always exist
+        EnsureDefaultUsers(conn);
+
+        // 3. Seed Data if empty
+        var farmCount = conn.ExecuteScalar<int>("SELECT COUNT(1) FROM farms;");
+        if (farmCount == 0)
         {
             SeedData(conn);
         }
@@ -304,12 +307,12 @@ public static class SqliteDatabaseInitializer
         }
     }
 
-    private static void SeedData(IDbConnection conn)
+    private static void EnsureDefaultUsers(IDbConnection conn)
     {
         // Users (Password: Password123!)
         var pwHash = BCrypt.Net.BCrypt.HashPassword("Password123!", 10);
         conn.Execute(@"
-            INSERT INTO users (id, username, email, password_hash, first_name, last_name, phone_number, role, is_active, is_staff)
+            INSERT OR IGNORE INTO users (id, username, email, password_hash, first_name, last_name, phone_number, role, is_active, is_staff)
             VALUES 
             ('u-001', 'chief', 'chief@ayis.org', @PwHash, 'Chief', 'Agrotechnologist', '+254 700 000 001', 'super_admin', 1, 1),
             ('u-002', 'admin', 'admin@ayis.org', @PwHash, 'System', 'Administrator', '+254 700 000 002', 'system_admin', 1, 1),
@@ -324,6 +327,11 @@ public static class SqliteDatabaseInitializer
             ('u-011', 'samuelo', 'samuel.o@farms.ke', @PwHash, 'Samuel', 'Ochieng', '+254 733 112 233', 'farmer', 1, 0),
             ('u-012', 'maryw', 'mary.wambui@farms.ke', @PwHash, 'Mary', 'Wambui', '+254 744 556 677', 'farmer', 1, 0);",
             new { PwHash = pwHash });
+    }
+
+    private static void SeedData(IDbConnection conn)
+    {
+        EnsureDefaultUsers(conn);
 
         // Regions
         conn.Execute(@"

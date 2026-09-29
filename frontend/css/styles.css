@@ -744,3 +744,35 @@ body.public-view .content-viewport {
   margin: 0 !important;
   max-width: 100%;
 }
+
+/* Quick Demo User Cards */
+.demo-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease-in-out;
+  width: 100%;
+}
+
+.demo-user-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.demo-user-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.demo-user-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
