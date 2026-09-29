@@ -1,4 +1,4 @@
-import { notificationService } from '../services/index.js';
+import { notificationService, authService } from '../services/index.js';
 import { showModal } from './modal.js';
 import { ui } from './ui.js';
 
@@ -87,6 +87,10 @@ export const notificationComponents = {
   async updateTopBadge() {
     const badge = document.getElementById('topNotifBadge');
     if (!badge) return;
+    if (!authService.isLoggedIn()) {
+      badge.style.display = 'none';
+      return;
+    }
     const unread = await notificationService.getUnreadCount();
     if (unread > 0) {
       badge.style.display = 'inline-block';

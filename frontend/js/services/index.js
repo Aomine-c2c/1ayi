@@ -1303,7 +1303,9 @@ export const notificationService = {
   },
 
   async listNotifications(params = {}) {
-    const live = await api.getNotifications(params);
+    if (!authService.isLoggedIn()) return [];
+    try {
+      const live = await api.getNotifications(params);
     if (Array.isArray(live) && live.length > 0) {
       return live.map(n => ({
         id: n.id,
@@ -1318,7 +1320,10 @@ export const notificationService = {
         isAgriculturalAlert: n.type === 'CRITICAL' || n.type === 'WARNING'
       }));
     }
-    return [];
+      return [];
+    } catch {
+      return [];
+    }
   },
 
   async getUnreadCount() {

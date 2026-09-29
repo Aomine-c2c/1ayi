@@ -22,6 +22,10 @@ class MapProviderFactory {
 
   create(containerId, options = {}) {
     const providerName = (options.provider || this.defaultProvider).toLowerCase();
+    if (providerName === 'leaflet' && (typeof window === 'undefined' || !window.L)) {
+      console.warn('[MapFactory] Leaflet (window.L) is not loaded, falling back to CanvasMapProvider.');
+      return new CanvasMapProvider(containerId, options);
+    }
     const ProviderClass = this.providers.get(providerName);
     if (!ProviderClass) {
       console.warn(`[MapFactory] Provider "${providerName}" not registered, falling back to "${this.defaultProvider}".`);
