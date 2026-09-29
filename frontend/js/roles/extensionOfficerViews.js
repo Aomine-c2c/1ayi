@@ -67,7 +67,13 @@ export const extensionOfficerViews = {
     const obs = await fieldOperationService.listObservations();
     const followUps = await fieldOperationService.getFollowUps();
     const weather = await weatherService.getRecentObservations();
-    const latestWeather = weather[weather.length - 1] || { temp: 22.4, humidity: 68, rain: 0.0, wind: 6.2 };
+    const rawWeather = (weather && weather.length > 0) ? weather[weather.length - 1] : null;
+    const latestWeather = {
+      temp: rawWeather?.temp ?? rawWeather?.temperatureC ?? 22.4,
+      humidity: rawWeather?.humidity ?? rawWeather?.humidityPct ?? 68,
+      rain: rawWeather?.rain ?? rawWeather?.rainfallMm ?? 0.0,
+      wind: rawWeather?.wind ?? rawWeather?.windSpeedKmh ?? 6.2
+    };
     const alerts = await weatherService.getAlerts();
 
     const pendingVisits = visits.filter(v => v.status !== 'COMPLETED');

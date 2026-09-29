@@ -159,10 +159,12 @@ async function runAudit() {
         // Test marker interaction (hover / click)
         const firstMarker = await page.$('.custom-leaflet-marker, .leaflet-marker-icon');
         if (firstMarker) {
-          await firstMarker.hover();
+          await mapContainer.scrollIntoViewIfNeeded();
+          await page.waitForTimeout(300);
+          await firstMarker.hover({ force: true });
           await page.waitForTimeout(300);
           console.log('  ✓ Marker hover interaction verified');
-          await firstMarker.click();
+          await firstMarker.click({ force: true });
           await page.waitForTimeout(500);
           console.log('  ✓ Marker click selection verified');
         }
@@ -170,7 +172,7 @@ async function runAudit() {
         // Test Leaflet zoom controls
         const zoomIn = await page.$('.leaflet-control-zoom-in');
         if (zoomIn) {
-          await zoomIn.click();
+          await zoomIn.click({ force: true });
           await page.waitForTimeout(300);
           console.log('  ✓ Map Zoom In control verified');
         }

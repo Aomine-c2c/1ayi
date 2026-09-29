@@ -514,10 +514,16 @@ function normaliseCurrentConditions(cc, id, name, region, lat, lon) {
     dataQualityScore: 99.0,
     lastSync: syncAgo,
     temp: cc.temperature?.value ?? 0,
+    temperatureC: cc.temperature?.value ?? 0,
     realFeelTemp: cc.realFeelTemperature?.value ?? 0,
     humidity: cc.relativeHumidity ?? 0,
+    humidityPct: cc.relativeHumidity ?? 0,
+    rain: cc.precipitationLast24hMm ?? 0,
     rain24h: cc.precipitationLast24hMm ?? 0,
+    rainfallMm: cc.precipitationLast24hMm ?? 0,
+    wind: cc.wind?.speed ?? 0,
     windSpeed: cc.wind?.speed ?? 0,
+    windSpeedKmh: cc.wind?.speed ?? 0,
     windDirection: cc.wind?.direction ?? 'N/A',
     pressureHpa: cc.pressureHpa ?? 1013,
     visibility: cc.visibility ?? 0,
@@ -548,7 +554,22 @@ export const weatherService = {
     } catch (e) {
       console.warn('[weatherService] AccuWeather current conditions unavailable, falling back to DB.', e);
     }
-    return await api.getRecentWeather();
+    const rawObs = await api.getRecentWeather();
+    if (Array.isArray(rawObs)) {
+      return rawObs.map(o => ({
+        ...o,
+        temp: o.temperatureC ?? o.temp ?? 22.4,
+        temperatureC: o.temperatureC ?? o.temp ?? 22.4,
+        humidity: o.humidityPct ?? o.humidity ?? 68,
+        humidityPct: o.humidityPct ?? o.humidity ?? 68,
+        rain: o.rainfallMm ?? o.rain24h ?? o.rain ?? 0.0,
+        rainfallMm: o.rainfallMm ?? o.rain24h ?? o.rain ?? 0.0,
+        wind: o.windSpeedKmh ?? o.windSpeed ?? o.wind ?? 6.2,
+        windSpeed: o.windSpeedKmh ?? o.windSpeed ?? o.wind ?? 6.2,
+        windSpeedKmh: o.windSpeedKmh ?? o.windSpeed ?? o.wind ?? 6.2
+      }));
+    }
+    return rawObs;
   },
 
   /**

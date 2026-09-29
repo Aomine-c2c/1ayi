@@ -74,7 +74,13 @@ export const farmManagerViews = {
     const cycles = await cropService.listCycles();
     const yieldEst = await yieldService.getEstimates();
     const weatherObs = await weatherService.getRecentObservations();
-    const latestWeather = weatherObs[weatherObs.length - 1] || { temp: 22.4, humidity: 68, rain: 0.0, wind: 6.2 };
+    const rawWeather = (weatherObs && weatherObs.length > 0) ? weatherObs[weatherObs.length - 1] : null;
+    const latestWeather = {
+      temp: rawWeather?.temp ?? rawWeather?.temperatureC ?? 22.4,
+      humidity: rawWeather?.humidity ?? rawWeather?.humidityPct ?? 68,
+      rain: rawWeather?.rain ?? rawWeather?.rainfallMm ?? 0.0,
+      wind: rawWeather?.wind ?? rawWeather?.windSpeedKmh ?? 6.2
+    };
     const alerts = await weatherService.getAlerts();
     const recs = await recommendationService.listRecommendations();
     const tasks = await fieldOperationService.listTasks();
