@@ -317,6 +317,16 @@ async function runAudit() {
     const isAgroRecsClean = !agroRecs.includes('Failed to render view') && !agroRecs.includes('soilMoisture');
     console.log(`  ✓ Agronomic Recommendations Hub: ${isAgroRecsClean ? 'Rendered successfully with complete edaphic & meteorological data' : 'Failed'}`);
 
+    // 4E. Agronomist Weather Intelligence (#weather-intelligence)
+    await page.evaluate(() => { window.location.hash = '#weather-intelligence'; });
+    await page.waitForTimeout(1500);
+    const agroWeather = await page.$eval('#contentViewport', el => el.innerText);
+    const isAgroWeatherClean = !agroWeather.includes('Failed to render view') && !agroWeather.includes('forecasts.map');
+    console.log(`  ✓ Agronomic Weather Intelligence: ${isAgroWeatherClean ? 'Rendered synoptic forecast & diurnal curves cleanly' : 'Failed'}`);
+    if (!isAgroWeatherClean) {
+      throw new Error(`Weather intelligence view failed to render: ${agroWeather}`);
+    }
+
     // Sign out Agronomist
     await dismissModalIfActive(page);
     await page.click('#btnTopSignOut');

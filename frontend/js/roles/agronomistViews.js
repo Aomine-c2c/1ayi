@@ -857,7 +857,7 @@ export const agronomistViews = {
           🌦️ 5-Day Agricultural Synoptic Forecast
         </h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
-          ${forecasts.map(f => `
+          ${(Array.isArray(forecasts) ? forecasts : (forecasts?.days ?? [])).map(f => `
             <div style="border: 1px solid var(--border-color); padding: 14px; border-radius: var(--radius-xs); text-align: center; background: var(--bg-primary);">
               <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted);">${f.date}</div>
               <div style="font-size: 1.3rem; font-weight: 900; color: var(--text-primary); margin: 6px 0;">${f.tempMax}° / ${f.tempMin}°C</div>

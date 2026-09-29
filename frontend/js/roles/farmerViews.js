@@ -512,7 +512,7 @@ export const farmerViews = {
           5-Day Agricultural Forecast & Spray Windows
         </h3>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;">
-          ${forecasts.map(f => `
+          ${(Array.isArray(forecasts) ? forecasts : (forecasts?.days ?? [])).map(f => `
             <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 16px; text-align: center;">
               <div style="font-size: 0.8rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">${f.date}</div>
               <div style="font-size: 1.6rem; font-weight: 900; color: var(--text-primary); margin: 6px 0;">${f.tempMax}° / ${f.tempMin}°</div>
