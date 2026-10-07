@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # ==============================================================================
+  # MySQL 8.0 with Native GIS Spatial Engine
+  # ==============================================================================
+  db:
+    image: mysql:8.0
+    container_name: ayis-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-AyisRoot2026!}
+      MYSQL_DATABASE: ayis_db
+      MYSQL_USER: ${DB_USER:-ayis_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-AyisSecurePass2026!}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/Database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./backend/Database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    ports:
+      - "127.0.0.1:3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-AyisRoot2026!}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ayis-network
+
+  # ==============================================================================
+  # C# ASP.NET Core 8 Minimal API Backend
+  # ==============================================================================
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: ayis-backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:5050
+      ConnectionStrings__DefaultConnection: "Server=db;Port=3306;Database=ayis_db;User=${DB_USER:-ayis_user};Password=${DB_PASSWORD:-AyisSecurePass2026!};SslMode=Preferred;"
+      Jwt__Key: ${JWT_KEY:-AYIS_PRODUCTION_SECRET_KEY_MIN_32_CHARACTERS_REQUIRED!}
+      Jwt__Issuer: Ayis.Api
+      Jwt__Audience: Ayis.Frontend
+      Jwt__ExpiryMinutes: 1440
+      AccuWeather__ApiKey: ${ACCUWEATHER_API_KEY:-zpka_ea3355b1c3cd4e6ea815609220688db3_81064c74a}
+    expose:
+      - "5050"
+    networks:
+      - ayis-network
+
+  # ==============================================================================
+  # High-Performance Nginx Frontend + API Reverse Proxy
+  # ==============================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: ayis-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "${PORT:-80}:80"
+    networks:
+      - ayis-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  ayis-network:
+    driver: bridge

@@ -329,21 +329,39 @@ export const authService = {
       ownerId: 'u-008',
       regionId: 'reg-004',
       sizeHa: parseFloat(onboardingData?.farm?.size) || 8.5,
-      latitude: parseFloat(onboardingData?.location?.latitude) || -0.3031,
-      longitude: parseFloat(onboardingData?.location?.longitude) || 36.0800,
-      boundaryWkt: 'POLYGON((36.0780 -0.3010, 36.0830 -0.3010, 36.0830 -0.3050, 36.0780 -0.3050, 36.0780 -0.3010))',
+      latitude: parseFloat(onboardingData?.location?.latitude) || -19.0154,
+      longitude: parseFloat(onboardingData?.location?.longitude) || 29.1549,
+      boundaryWkt: 'POLYGON((29.1500 -19.0100, 29.1600 -19.0100, 29.1600 -19.0200, 29.1500 -19.0200, 29.1500 -19.0100))',
       primaryCrop: onboardingData?.activities?.primaryCrop || 'Maize',
-      soilType: 'Volcanic Loam (pH 6.4)',
+      soilType: onboardingData?.area?.soilType || 'Sandy Clay Loam (pH 6.2)',
       irrigationType: onboardingData?.activities?.irrigation || 'Rainfed + Supplemental Drip',
-      elevationM: 1850
+      elevationM: 1400
     };
 
-    const res = await api.createFarm(newFarm);
+    let syncedWithBackend = false;
+    try {
+      await api.createFarm(newFarm);
+      syncedWithBackend = true;
+    } catch (err) {
+      console.warn('[authService] Backend offline or unreachable during onboarding. Persisting locally.', err);
+      // Persist in localStorage so offline mode retains farm
+      try {
+        const stored = JSON.parse(localStorage.getItem('ayis_offline_farms') || '[]');
+        stored.push(newFarm);
+        localStorage.setItem('ayis_offline_farms', JSON.stringify(stored));
+      } catch (e) {
+        console.error('Failed to store offline farm', e);
+      }
+    }
+
     return {
       success: true,
       farmId,
       farm: newFarm,
-      message: 'Farmer and farm parcel registered successfully into database with spatial SRID 4326.'
+      syncedWithBackend,
+      message: syncedWithBackend
+        ? 'Farmer and farm parcel registered successfully into database with spatial SRID 4326.'
+        : 'Farmer registration completed in offline mode. Parcel cached locally and will sync when API reconnects.'
     };
   },
 

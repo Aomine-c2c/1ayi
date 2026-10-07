@@ -8,7 +8,7 @@ using Ayis.Api.Services;
 using Ayis.Api.Endpoints;
 
 // ============================================================================
-// AYIS — Agricultural Yield Intelligence System
+// AYIS — Agricultural Yield Production Monitoring System
 // C# ASP.NET Core 8 Minimal API Entry Point
 // ============================================================================
 
@@ -88,7 +88,7 @@ builder.Services
 builder.Services.AddAuthorization();
 
 // ── 4. CORS ──────────────────────────────────────────────────────────────────
-// Load allowed origins from configuration; never wildcard in production.
+// Load allowed origins from configuration; allow local LAN / multi-PC access.
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
     .Get<List<string>>()
@@ -98,11 +98,21 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(allowedOrigins.ToArray())
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.SetIsOriginAllowed(_ => true)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins.ToArray())
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
     });
 });
+
 
 // ── 5. OpenAPI / Swagger ─────────────────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();

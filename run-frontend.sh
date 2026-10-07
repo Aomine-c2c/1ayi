@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# ==============================================================================
+# AYIS Frontend Launcher (Vanilla HTML5 / CSS / ES6 JavaScript)
+# ==============================================================================
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,14 +37,32 @@ echo "=========================================="
 echo "   Starting AYIS Frontend (Vanilla Web)   "
 echo "=========================================="
 
+get_lan_ip() {
+    if command -v ip &>/dev/null; then
+        ip -4 addr show scope global | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -n 1 2>/dev/null || echo "127.0.0.1"
+    elif command -v ifconfig &>/dev/null; then
+        ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}' | head -n 1 2>/dev/null || echo "127.0.0.1"
+    else
+        echo "127.0.0.1"
+    fi
+}
+
+LAN_IP=$(get_lan_ip)
+
+echo "--------------------------------------------------------"
+echo " AYIS Frontend is ready for Multi-PC / Network Access:"
+echo " -> Local:   http://localhost:$PORT"
+if [ "$LAN_IP" != "127.0.0.1" ]; then
+echo " -> Network: http://$LAN_IP:$PORT"
+echo " (Open http://$LAN_IP:$PORT on any PC / smartphone on this Wi-Fi/LAN)"
+fi
+echo "--------------------------------------------------------"
+
 if command -v python3 &>/dev/null; then
-    echo "Serving frontend via Python 3 on http://localhost:$PORT..."
-    python3 -m http.server "$PORT" --directory "$FRONTEND_DIR"
+    python3 -m http.server "$PORT" --bind 0.0.0.0 --directory "$FRONTEND_DIR"
 elif command -v python &>/dev/null; then
-    echo "Serving frontend via Python on http://localhost:$PORT..."
-    python -m http.server "$PORT" --directory "$FRONTEND_DIR"
+    python -m http.server "$PORT" --bind 0.0.0.0 --directory "$FRONTEND_DIR"
 elif command -v npx &>/dev/null; then
-    echo "Serving frontend via npx serve on http://localhost:$PORT..."
     npx serve "$FRONTEND_DIR" -l "$PORT"
 else
     echo "Error: Python or npx required to serve frontend."

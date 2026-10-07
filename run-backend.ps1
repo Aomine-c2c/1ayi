@@ -2,8 +2,12 @@
 .SYNOPSIS
     Runs the C# ASP.NET Core Minimal API Backend Locally
 .DESCRIPTION
-    Launches Ayis.Api on http://localhost:8000 using native dotnet CLI.
+    Launches Ayis.Api on http://localhost:5050 (or requested port) using native dotnet CLI.
 #>
+
+param (
+    [int]$Port = 5050
+)
 
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host "   Starting AYIS C# Backend (.NET 8)      " -ForegroundColor Cyan
@@ -28,10 +32,10 @@ Set-Location $apiDir
 Write-Host "Restoring NuGet packages..." -ForegroundColor Green
 dotnet restore
 
-Write-Host "Launching AYIS Minimal API on http://localhost:8000..." -ForegroundColor Green
-Write-Host "Swagger UI will be available at: http://localhost:8000/swagger" -ForegroundColor Cyan
+Write-Host "Launching AYIS Minimal API on http://localhost:$Port..." -ForegroundColor Green
+Write-Host "Swagger UI will be available at: http://localhost:$Port/swagger" -ForegroundColor Cyan
 
-$env:ASPNETCORE_URLS = "http://localhost:8000"
+$env:ASPNETCORE_URLS = "http://0.0.0.0:$Port"
 $env:ASPNETCORE_ENVIRONMENT = "Development"
 
-dotnet run
+dotnet run --urls "http://0.0.0.0:$Port"

@@ -1,5 +1,7 @@
 import { farmService, cropService, weatherService, recommendationService, yieldService, fieldOperationService, adminService, reportService, notificationService, authService } from './services/index.js';
+import { getApiBaseUrl, setApiBaseUrl } from './api.js';
 import { renderGisMap, renderWeatherChart } from './components/gisMap.js';
+
 import { showModal } from './components/modal.js';
 import { authViews } from './auth/authViews.js?v=2';
 import { ui } from './components/ui.js';
@@ -1941,14 +1943,78 @@ export const views = {
 
   // 18. Settings & Architecture Overview
   async settings(container) {
+    const currentApi = getApiBaseUrl();
+    const isCustom = !!localStorage.getItem('ayis_api_server');
+
     container.innerHTML = `
       ${ui.breadcrumbs([{ label: 'Platform', hash: '#dashboard' }, { label: 'System Configuration' }])}
 
       <div class="panel" style="padding: 24px; margin-bottom: 24px;">
         <h1 style="font-size: 1.5rem; font-weight: 900; color: var(--text-primary);">System & Platform Configuration</h1>
         <p style="font-size: 0.875rem; color: var(--text-muted); margin-top: 4px;">
-          Runtime engine settings, MySQL connection parameters, and agromet data sync frequencies
+          Multi-PC network operation, runtime engine settings, and backend endpoint management
         </p>
+      </div>
+
+      <!-- Multi-PC Network Topology & Remote API Panel -->
+      <div class="panel" style="padding: 24px; margin-bottom: 24px; border: 2px solid var(--primary-light, #2e7d32);">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+          <div>
+            <span class="badge" style="background: rgba(46,125,50,0.15); color: #1b5e20; font-weight: 800;">🌐 MULTI-PC OPERATION</span>
+            <h2 style="font-size: 1.25rem; font-weight: 900; margin-top: 6px; color: var(--text-primary);">Network & Remote PC Connectivity</h2>
+          </div>
+          <span style="font-size: 0.8rem; font-family: monospace; padding: 4px 10px; border-radius: 4px; background: var(--bg-primary); border: 1px solid var(--border-color);">
+            Active Host: ${window.location.host}
+          </span>
+        </div>
+
+        <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 18px;">
+          AYIS supports cross-device and multi-PC operation across your local area network (LAN) or VPN.
+          You can run the backend server on one central PC or server, and connect from other workstations, tablets, or field devices seamlessly.
+        </p>
+
+        <div style="background: var(--bg-primary); padding: 18px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 18px;">
+          <label style="display: block; font-weight: 800; font-size: 0.85rem; margin-bottom: 6px; color: var(--text-primary);">
+            Target C# Backend API Server Endpoint
+          </label>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <input 
+              type="text" 
+              id="txtApiServerEndpoint" 
+              class="form-input" 
+              value="${currentApi}" 
+              placeholder="e.g. http://192.168.1.104:5050/api/v1"
+              style="flex: 1; min-width: 280px; font-family: monospace; font-size: 0.9rem;"
+            />
+            <button class="btn btn-primary" id="btnSaveApiServer">Save Endpoint</button>
+            <button class="btn btn-outline" id="btnTestApiServer">Test Ping</button>
+            <button class="btn" id="btnResetApiServer" style="background: var(--bg-secondary); border: 1px solid var(--border-color);" title="Reset to automatic host derivation">Auto Detect</button>
+          </div>
+          <div id="apiPingResult" style="margin-top: 10px; font-size: 0.85rem; font-weight: 700; display: none;"></div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px;">
+            ${isCustom ? '⚡ Custom server endpoint is actively stored in this browser.' : '✨ Automatically deriving backend address from current browser hostname on port 5050.'}
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; font-size: 0.825rem;">
+          <div style="padding: 12px; background: rgba(0,0,0,0.02); border-radius: 6px; border: 1px solid var(--border-subtle);">
+            <strong>💻 Multi-PC Access Steps:</strong>
+            <ol style="margin: 6px 0 0 18px; padding: 0; line-height: 1.5;">
+              <li>Run <code>./run.sh</code> on your main PC hosting AYIS.</li>
+              <li>Note the LAN IP (e.g. <code>http://192.168.1.104:8080</code>).</li>
+              <li>Open that URL on any secondary PC on the same Wi-Fi/LAN.</li>
+              <li>AYIS automatically communicates with the host API seamlessly!</li>
+            </ol>
+          </div>
+
+          <div style="padding: 12px; background: rgba(0,0,0,0.02); border-radius: 6px; border: 1px solid var(--border-subtle);">
+            <strong>🚀 Remote URL Parameter Override:</strong>
+            <p style="margin: 6px 0 0 0; line-height: 1.5;">
+              You can instantly point any client PC to a central host by visiting:<br>
+              <code style="word-break: break-all;">#?api=http://&lt;HOST_IP&gt;:5050/api/v1</code>
+            </p>
+          </div>
+        </div>
       </div>
 
       <div class="panel" style="padding: 24px;">
@@ -1967,12 +2033,70 @@ export const views = {
             <p style="color: var(--text-secondary); margin-top: 4px;">MySQL 8.4 Spatial (POINT, POLYGON, SRID 4326)</p>
           </div>
           <div style="background: var(--bg-primary); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-            <strong style="color: var(--text-primary);">Future Django Compatibility:</strong>
-            <p style="color: var(--text-secondary); margin-top: 4px;">Clean service abstraction allows seamless drop-in API replacement</p>
+            <strong style="color: var(--text-primary);">Multi-PC Network Readiness:</strong>
+            <p style="color: var(--text-secondary); margin-top: 4px;">0.0.0.0 Dual-Stack Host Binding, LAN CORS Policy, & Dynamic Client Resolution</p>
           </div>
         </div>
       </div>
     `;
+
+    // Bind event handlers for multi-PC settings
+    const txtEndpoint = container.querySelector('#txtApiServerEndpoint');
+    const btnSave = container.querySelector('#btnSaveApiServer');
+    const btnTest = container.querySelector('#btnTestApiServer');
+    const btnReset = container.querySelector('#btnResetApiServer');
+    const pingRes = container.querySelector('#apiPingResult');
+
+    btnSave?.addEventListener('click', () => {
+      if (txtEndpoint && txtEndpoint.value) {
+        setApiBaseUrl(txtEndpoint.value);
+        if (pingRes) {
+          pingRes.style.display = 'block';
+          pingRes.style.color = '#2e7d32';
+          pingRes.textContent = `✓ API endpoint updated to: ${getApiBaseUrl()}`;
+        }
+      }
+    });
+
+    btnReset?.addEventListener('click', () => {
+      setApiBaseUrl(null);
+      if (txtEndpoint) txtEndpoint.value = getApiBaseUrl();
+      if (pingRes) {
+        pingRes.style.display = 'block';
+        pingRes.style.color = '#1565c0';
+        pingRes.textContent = `✓ Reset to automatic host derivation: ${getApiBaseUrl()}`;
+      }
+    });
+
+    btnTest?.addEventListener('click', async () => {
+      const target = txtEndpoint?.value ? txtEndpoint.value.trim().replace(/\/+$/, '') : getApiBaseUrl();
+      const healthUrl = target.endsWith('/api/v1') ? `${target}/health` : `${target}/api/v1/health`;
+      if (pingRes) {
+        pingRes.style.display = 'block';
+        pingRes.style.color = 'var(--text-muted)';
+        pingRes.textContent = `Pinging ${healthUrl}...`;
+      }
+      try {
+        const resp = await fetch(healthUrl, { method: 'GET', credentials: 'omit' });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (pingRes) {
+            pingRes.style.color = '#2e7d32';
+            pingRes.textContent = `✓ Backend Online & Responsive! Stack: ${data.stack || 'C# .NET 8'} (Status: ${data.status})`;
+          }
+        } else {
+          if (pingRes) {
+            pingRes.style.color = '#c62828';
+            pingRes.textContent = `✕ Server reached but returned HTTP status ${resp.status}`;
+          }
+        }
+      } catch (err) {
+        if (pingRes) {
+          pingRes.style.color = '#c62828';
+          pingRes.textContent = `✕ Connection failed: ${err.message}. Verify backend is running and reachable.`;
+        }
+      }
+    });
   },
 
   // 19. Global Notification Center

@@ -3,13 +3,15 @@
 > **Precision Agriculture & Decision Support Platform**  
 > Built with a high-performance **C# ASP.NET Core Minimal API (.NET 8.0)** backend, **MySQL 8 with native GIS spatial engine**, and a responsive **Vanilla Web Frontend (HTML5, CSS3, ES6 JavaScript)** without bloated JavaScript framework runtimes.
 
-> **Comprehensive User Manual:** For persona breakdowns, operational workflows, and step-by-step role guides, consult the [System Architecture & User Manual](SYSTEM_USER_MANUAL.md).
+> **Comprehensive User Manual:** For persona breakdowns, operational workflows, and step-by-step role guides, consult the [System Architecture & User Manual](SYSTEM_USER_MANUAL.md).  
+> **Universal Setup Guide:** For step-by-step installation on Windows, Linux, and macOS, consult the [Cross-Platform Setup & Run Guide](SETUP_AND_RUN_GUIDE.md).
 
 ---
 
 ## 📋 Table of Contents
 
-0. [Comprehensive User & Operational Manual](SYSTEM_USER_MANUAL.md)
+- [Comprehensive User & Operational Manual](SYSTEM_USER_MANUAL.md)
+- [Universal Cross-Platform Setup & Run Guide](SETUP_AND_RUN_GUIDE.md)
 1. [System Overview](#-system-overview)
 2. [Architecture & Technology Stack](#-architecture--technology-stack)
 3. [Repository Layout](#-repository-layout)
@@ -166,11 +168,13 @@ chmod +x run.sh run-backend.sh run-frontend.sh
 ```
 
 ### What Happens Automatically:
-1. **Port conflict prevention**: Checks whether ports `8000` (backend) or `8080` (frontend) are held by stale processes and frees or re-routes them.
-2. **Backend initialization**: Restores NuGet dependencies and compiles `Ayis.Api`, launching on `http://localhost:8000`.
-3. **Health verification**: Polls `/api/v1/health` until the API is responding.
-4. **Frontend server**: Serves the `frontend/` directory via Python HTTP server on `http://localhost:8080`.
-5. **Graceful shutdown**: Hitting `Ctrl+C` cleans up both the frontend and backend processes cleanly.
+1. **Prerequisite & dependency auto-check**: Automatically verifies `.NET 8 SDK`, `MySQL 8`, and `Python 3` / `npx`. If absent, prompts or triggers silent installation via OS package managers (`winget` on Windows, `brew` on macOS, `apt`/`dnf`/`pacman` on Linux).
+2. **Database auto-detection & initialization**: Verifies MySQL connectivity and table presence; automatically seeds `schema.sql` and `seed.sql` into `ayis_db` on first run (with SQLite fallback if MySQL is unconfigured).
+3. **Port conflict prevention**: Checks whether ports `5050` (backend) or `8080` (frontend) are held by stale processes and frees or re-routes them.
+4. **Backend initialization**: Restores NuGet dependencies and compiles `Ayis.Api`, launching on `http://localhost:5050`.
+5. **Health verification**: Polls `/api/v1/health` until the API is responding.
+6. **Frontend server**: Serves the `frontend/` directory via Python HTTP server on `http://localhost:8080`.
+7. **Graceful shutdown**: Hitting `Ctrl+C` cleans up both the frontend and backend processes cleanly.
 
 ---
 
@@ -255,8 +259,8 @@ If you prefer to run services in separate terminal sessions:
 ## 🔌 Backend Minimal APIs & Swagger Spec
 
 Once the backend is running, the interactive Swagger UI is available at:
-👉 **[http://localhost:8000/swagger](http://localhost:8000/swagger)**  
-Raw OpenAPI JSON: `http://localhost:8000/swagger/v1/swagger.json`
+👉 **[http://localhost:5050/swagger](http://localhost:5050/swagger)**  
+Raw OpenAPI JSON: `http://localhost:5050/swagger/v1/swagger.json`
 
 ### Key Endpoint Reference:
 
@@ -349,6 +353,74 @@ The included `backend/Database/seed.sql` creates pre-configured accounts for tes
 
 ---
 
+---
+
+---
+
+## ☁️ Cloud Server & VPS Public Deployment (Access From Anywhere)
+
+To operate AYIS on a public server (DigitalOcean, Hetzner, AWS, Linode, or any Ubuntu/Debian VPS) so that anyone across the globe can access it via a public IP or custom domain:
+
+### 1. One-Command Cloud Deploy
+On your VPS, run:
+```bash
+git clone https://github.com/Aomine-c2c/1ayi.git
+cd 1ayi
+./deploy-cloud.sh
+```
+
+### 2. Manual Docker Compose Deployment
+```bash
+cp .env.production .env
+docker compose up --build -d
+```
+
+### 3. What This Deploys:
+- **`ayis-frontend`**: Nginx Alpine container serving HTML5/JS/CSS with gzip compression on port `80` and internal reverse proxy for `/api/v1` and `/swagger`.
+- **`ayis-backend`**: High-performance .NET 8 Minimal API binary running on port `5050`.
+- **`ayis-mysql`**: MySQL 8.0 GIS spatial engine with automatic schema execution and demonstration seed data loaded into persistent volume `mysql_data`.
+
+Once deployed, users on any PC, tablet, or smartphone can open `http://<YOUR_SERVER_IP>` directly.
+
+---
+
+## 🌐 Local Network (LAN) Multi-PC Operation
+
+If you want to run AYIS locally in your farm office or lab across multiple computers on the same Wi-Fi:
+
+### 1. Central Host Machine
+Start AYIS on the primary computer hosting the system:
+```bash
+./run.sh
+```
+Upon startup, `run.sh` will display both your local and network LAN addresses:
+```text
+==========================================================
+    AYIS is running and ready for MULTI-PC OPERATION!     
+==========================================================
+ Access locally on this machine:
+   -> Frontend: http://localhost:8080
+   -> Backend:  http://localhost:5050
+
+ Access from any other PC / laptop / tablet on the same LAN:
+   -> Frontend: http://192.168.1.104:8080
+   -> Backend:  http://192.168.1.104:5050/api/v1
+   -> Swagger:  http://192.168.1.104:5050/swagger
+==========================================================
+```
+
+### 2. Client PCs & Devices
+1. On any other PC or mobile device connected to the same Wi-Fi or LAN, open your web browser.
+2. Navigate to: `http://<HOST_IP>:8080` (e.g. `http://192.168.1.104:8080`).
+3. The frontend dynamically resolves the central backend host API without configuration!
+4. **Custom Backend Endpoint:** If connecting across separate subnets or custom proxies, go to **Settings & Platform Configuration** in the UI, or launch directly with:
+   ```text
+   http://<HOST_IP>:8080/#?api=http://<BACKEND_HOST_OR_IP>:5050/api/v1
+   ```
+
+
+---
+
 ## 🛡️ Port Management & Automatic Fallback
 
 To prevent startup crashes caused by `Address already in use` errors (e.g. from terminated sessions or background daemons), the AYIS scripts include intelligent port safety:
@@ -356,6 +428,7 @@ To prevent startup crashes caused by `Address already in use` errors (e.g. from 
 1. **Pre-flight Port Cleaning**: `run.sh` proactively frees orphaned listeners on the chosen backend and frontend ports before starting new processes.
 2. **Dynamic Port Scan**: `run-frontend.sh`, `run-frontend.ps1`, and `run-backend.sh` inspect if the desired port is open. If occupied, they automatically select the next available port (e.g., `8081`, `8082`) and update the runtime URLs on the fly.
 3. **Exit Traps**: Pressing `Ctrl+C` cleanly tears down both the backend background job and the frontend web server.
+
 
 ---
 

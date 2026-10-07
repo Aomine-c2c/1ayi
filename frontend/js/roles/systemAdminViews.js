@@ -44,8 +44,10 @@
  */
 
 import { adminService, farmService, cropService, weatherService, recommendationService, fieldOperationService, authService } from '../services/index.js';
+import { getApiBaseUrl, setApiBaseUrl } from '../api.js';
 import { showModal } from '../components/modal.js';
 import { ui } from '../components/ui.js';
+
 
 export const systemAdminViews = {
   // =========================================================================
@@ -921,9 +923,30 @@ export const systemAdminViews = {
           </div>
         </div>
 
+        <!-- Multi-PC Network & Backend Topology -->
+        <div class="panel" style="padding: 20px; border-left: 4px solid var(--primary-dark);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h3 style="font-size: 1.1rem; font-weight: 800; margin: 0;">4. Multi-PC Network & API Connectivity</h3>
+            <span class="badge" style="background: rgba(46,125,50,0.15); color: #1b5e20;">ONLINE</span>
+          </div>
+          <p style="font-size: 0.825rem; color: var(--text-secondary); margin-bottom: 12px;">
+            Enables secondary desktop terminals and tablet clients to target this or a central host backend.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label class="form-label" style="font-weight: 700; font-size: 0.8rem;">Target Backend API Endpoint</label>
+            <input type="text" id="adminApiEndpointInput" class="form-input" style="font-family: monospace; font-size: 0.85rem;" value="${getApiBaseUrl()}">
+            <div style="display: flex; gap: 8px; margin-top: 6px;">
+              <button class="btn btn-primary" id="btnAdminSaveApi" style="font-size: 0.8rem; padding: 6px 12px;">Save Endpoint</button>
+              <button class="btn btn-outline" id="btnAdminTestApi" style="font-size: 0.8rem; padding: 6px 12px;">Test Ping</button>
+              <button class="btn" id="btnAdminResetApi" style="font-size: 0.8rem; padding: 6px 12px; background: var(--bg-secondary); border: 1px solid var(--border-color);">Auto Host</button>
+            </div>
+            <div id="adminApiPingResult" style="font-size: 0.8rem; font-weight: 700; margin-top: 6px; display: none;"></div>
+          </div>
+        </div>
+
         <!-- Notifications & Alerts -->
         <div class="panel" style="padding: 20px;">
-          <h3 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 14px;">4. Notification Channels</h3>
+          <h3 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 14px;">5. Notification Channels</h3>
           <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.85rem;">
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
               <input type="checkbox" checked> Enable Instant SMS Warning Broadcasts to Farmers
@@ -941,5 +964,63 @@ export const systemAdminViews = {
         </div>
       </div>
     `;
+
+    const apiInput = container.querySelector('#adminApiEndpointInput');
+    const btnSave = container.querySelector('#btnAdminSaveApi');
+    const btnTest = container.querySelector('#btnAdminTestApi');
+    const btnReset = container.querySelector('#btnAdminResetApi');
+    const pingRes = container.querySelector('#adminApiPingResult');
+
+    btnSave?.addEventListener('click', () => {
+      if (apiInput && apiInput.value) {
+        setApiBaseUrl(apiInput.value);
+        if (pingRes) {
+          pingRes.style.display = 'block';
+          pingRes.style.color = '#2e7d32';
+          pingRes.textContent = `✓ API endpoint updated to: ${getApiBaseUrl()}`;
+        }
+      }
+    });
+
+    btnReset?.addEventListener('click', () => {
+      setApiBaseUrl(null);
+      if (apiInput) apiInput.value = getApiBaseUrl();
+      if (pingRes) {
+        pingRes.style.display = 'block';
+        pingRes.style.color = '#1565c0';
+        pingRes.textContent = `✓ Auto host derivation restored: ${getApiBaseUrl()}`;
+      }
+    });
+
+    btnTest?.addEventListener('click', async () => {
+      const target = apiInput?.value ? apiInput.value.trim().replace(/\/+$/, '') : getApiBaseUrl();
+      const healthUrl = target.endsWith('/api/v1') ? `${target}/health` : `${target}/api/v1/health`;
+      if (pingRes) {
+        pingRes.style.display = 'block';
+        pingRes.style.color = 'var(--text-muted)';
+        pingRes.textContent = `Pinging ${healthUrl}...`;
+      }
+      try {
+        const resp = await fetch(healthUrl, { method: 'GET', credentials: 'omit' });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (pingRes) {
+            pingRes.style.color = '#2e7d32';
+            pingRes.textContent = `✓ Backend Online & Responsive (${data.status})`;
+          }
+        } else {
+          if (pingRes) {
+            pingRes.style.color = '#c62828';
+            pingRes.textContent = `✕ Server returned HTTP ${resp.status}`;
+          }
+        }
+      } catch (err) {
+        if (pingRes) {
+          pingRes.style.color = '#c62828';
+          pingRes.textContent = `✕ Unreachable: ${err.message}`;
+        }
+      }
+    });
   }
 };
+

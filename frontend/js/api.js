@@ -15,10 +15,46 @@
  *     custom event so the router can redirect to login.
  */
 
-const API_BASE_URL =
-  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? 'http://localhost:8000/api/v1'
-    : '/api/v1';
+// Resolve API endpoint dynamically:
+// 1. Explicit override in localStorage ('ayis_api_server') e.g. "http://192.168.1.104:5050/api/v1"
+// 2. URL search parameter '?api=http://<host>:5050/api/v1'
+// 3. Fallback to current browser host with port 5050
+export function getApiBaseUrl() {
+  const urlParam = new URLSearchParams(window.location.search).get('api');
+  if (urlParam) {
+    localStorage.setItem('ayis_api_server', urlParam.replace(/\/+$/, ''));
+  }
+  const customServer = localStorage.getItem('ayis_api_server');
+  if (customServer) {
+    return customServer.replace(/\/+$/, '');
+  }
+  const protocol = window.location.protocol || 'http:';
+  const hostname = window.location.hostname || 'localhost';
+  const port = window.location.port;
+
+  // If deployed on cloud/production domain or reverse-proxy container (port 80, 443, or no port specified)
+  if (!port || port === '80' || port === '443') {
+    return '/api/v1';
+  }
+
+  // If running from separate dev port (e.g. 8080), route to backend on 5050
+  return `${protocol}//${hostname}:5050/api/v1`;
+}
+
+export function setApiBaseUrl(url) {
+  if (!url) {
+    localStorage.removeItem('ayis_api_server');
+  } else {
+    let clean = url.trim().replace(/\/+$/, '');
+    if (!clean.endsWith('/api/v1')) {
+      clean += '/api/v1';
+    }
+    localStorage.setItem('ayis_api_server', clean);
+  }
+}
+
+export const API_BASE_URL = getApiBaseUrl();
+
 
 // ── Typed error class ─────────────────────────────────────────────────────────
 export class ApiError extends Error {
@@ -65,8 +101,9 @@ export const api = {
     };
 
     let res;
+    const baseUrl = getApiBaseUrl();
     try {
-      res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      res = await fetch(`${baseUrl}${endpoint}`, {
         credentials: 'omit',
         ...options,
         headers: { ...headers, ...(options.headers || {}) }

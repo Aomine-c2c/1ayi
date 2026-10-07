@@ -653,11 +653,10 @@ canvas {
 
 .interactive-map-picker {
   width: 100%;
-  height: 180px;
+  height: 200px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: #f1f5f9;
-  cursor: crosshair;
   position: relative;
   overflow: hidden;
 }
