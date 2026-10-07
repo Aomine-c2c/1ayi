@@ -1433,7 +1433,7 @@ export const farmManagerViews = {
           <div style="display: flex; justify-content: space-between; border-bottom: 2px solid var(--primary); padding-bottom: 16px; margin-bottom: 20px;">
             <div>
               <h2 style="font-size: 1.4rem; font-weight: 900; margin: 0; color: var(--text-primary);">ESTATE OPERATIONAL AUDIT: FARM PERFORMANCE</h2>
-              <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Agricultural Yield Intelligence System (AYIS) · C# & MySQL 8</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Agricultural Yield Production Monitoring System (AYIS) · C# & MySQL 8</div>
             </div>
             <div style="text-align: right; font-size: 0.85rem;">
               <strong>Date:</strong> 2026-09-14<br>

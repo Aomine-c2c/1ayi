@@ -1,5 +1,5 @@
 -- ==========================================================
--- AYIS (Agricultural Yield Intelligence System)
+-- AYIS (Agricultural Yield Production Monitoring System)
 -- MySQL 8 Spatial Database Schema
 -- Compatible with C# Minimal APIs + Dapper
 -- ==========================================================

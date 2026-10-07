@@ -1801,7 +1801,7 @@ export const adminService = {
   },
   async getPlatformSettings() {
     return {
-      general: { platformName: 'Agricultural Yield Intelligence System (AYIS)', organization: 'Kenya Agricultural & Livestock Research Organization (KALRO)', timezone: 'Africa/Nairobi (UTC+3)', language: 'English (Kenya)' },
+      general: { platformName: 'Agricultural Yield Production Monitoring System (AYIS)', organization: 'Kenya Agricultural & Livestock Research Organization (KALRO)', timezone: 'Africa/Nairobi (UTC+3)', language: 'English (Kenya)' },
       units: { temperature: 'Celsius (°C)', rainfall: 'Millimeters (mm)', area: 'Hectares (ha)', yield: 'Metric Tonnes / ha (t/ha)', pressure: 'Hectopascals (hPa)', windSpeed: 'Kilometers per hour (km/h)' },
       regional: { primaryCounty: 'Nakuru County', agroEcologicalZone: 'AEZ III / IV (Sub-humid to Semi-arid High Plains)', spatialSRID: 'EPSG:4326 (WGS84 GPS Native)' },
       notifications: { emailNotifications: true, smsAlertBroadcasts: true, criticalAlertCooldownMinutes: 30, pushNotificationSound: true },

@@ -1508,7 +1508,7 @@ export const authViews = {
         <!-- Footer -->
         <footer style="background: var(--bg-secondary); padding: 40px; text-align: center; border-top: 1px solid var(--border-subtle);">
           <div style="font-size: 1.8rem; margin-bottom: 12px;">🌱</div>
-          <p style="color: var(--text-muted); font-size: 0.85rem;">© 2026 AYIS — Agricultural Yield Intelligence System. All rights reserved.</p>
+          <p style="color: var(--text-muted); font-size: 0.85rem;">© 2026 AYIS — Agricultural Yield Production Monitoring System. All rights reserved.</p>
           <div style="margin-top: 16px; font-size: 0.8rem; color: var(--text-muted);">
             High-Performance Web · C# 8 Backend · MySQL Spatial
           </div>

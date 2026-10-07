@@ -1,5 +1,5 @@
 # AYIS — Universal Cross-Platform Setup & Run Guide
-**Agricultural Yield Intelligence System (AYIS)**  
+**Agricultural Yield Production Monitoring System (AYIS)**  
 *Run seamlessly on Windows, Linux (Ubuntu/Debian, Fedora, Arch), and macOS.*
 
 ---

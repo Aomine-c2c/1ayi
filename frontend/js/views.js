@@ -2565,7 +2565,7 @@ export const views = {
       <div class="panel" style="padding: 32px; max-width: 800px; margin: 0 auto; text-align: center;">
         <div style="font-size: 3rem; margin-bottom: 12px;">🌱</div>
         <h1 style="font-size: 1.8rem; font-weight: 900; color: var(--text-primary); letter-spacing: -0.5px;">
-          Agricultural Yield Intelligence System (AYIS)
+          Agricultural Yield Production Monitoring System (AYIS)
         </h1>
         <p style="font-size: 1rem; color: var(--primary-dark); font-weight: 700; margin-top: 6px;">
           Production Release 2026.1 · National Agricultural Decision Engine

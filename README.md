@@ -1,4 +1,4 @@
-# Agricultural Yield Intelligence System (AYIS)
+# Agricultural Yield Production Monitoring System (AYIS)
 
 > **Precision Agriculture & Decision Support Platform**  
 > Built with a high-performance **C# ASP.NET Core Minimal API (.NET 8.0)** backend, **MySQL 8 with native GIS spatial engine**, and a responsive **Vanilla Web Frontend (HTML5, CSS3, ES6 JavaScript)** without bloated JavaScript framework runtimes.
@@ -31,7 +31,7 @@
 
 ## 🌾 System Overview
 
-The **Agricultural Yield Intelligence System (AYIS)** is an end-to-end agrotechnology platform designed to empower agricultural organizations, farm managers, extension officers, agronomists, and smallholder farmers.
+The **Agricultural Yield Production Monitoring System (AYIS)** is an end-to-end agrotechnology platform designed to empower agricultural organizations, farm managers, extension officers, agronomists, and smallholder farmers.
 
 AYIS aggregates and processes:
 - **Geospatial Parcel Boundaries**: Polygon/Point geometry with SRID 4326 for farms and sub-fields.

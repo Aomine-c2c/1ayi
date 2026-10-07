@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AYIS (Agricultural Yield Intelligence System) — Unified System Runner
+# AYIS (Agricultural Yield Production Monitoring System) — Unified System Runner
 # Compatible with Linux (Ubuntu, Debian, Fedora, Arch) and macOS
 # ==============================================================================
 set -e

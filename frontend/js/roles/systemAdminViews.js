@@ -83,7 +83,7 @@ export const systemAdminViews = {
             </h1>
             <p style="color: var(--text-secondary); margin: 0; font-size: 0.92rem; max-width: 760px;">
               Overseeing platform infrastructure, user provisioning, role-based access control (RBAC),
-              telemetry ingest pipelines, and audit trails for the Agricultural Yield Intelligence System.
+              telemetry ingest pipelines, and audit trails for the Agricultural Yield Production Monitoring System.
             </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">

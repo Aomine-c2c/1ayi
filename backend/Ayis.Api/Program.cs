@@ -120,7 +120,7 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title       = "AYIS API — Agricultural Yield Intelligence System",
+        Title       = "AYIS API — Agricultural Yield Production Monitoring System",
         Version     = "v1",
         Description = "C# .NET 8 Minimal API backend with Dapper + MySQL 8 spatial engine"
     });

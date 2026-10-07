@@ -2,6 +2,7 @@
 .SYNOPSIS
     Unified Cross-Platform Runner for AYIS (Backend & Frontend)
 .DESCRIPTION
+    Agricultural Yield Production Monitoring System (AYIS)
     Performs pre-flight checks and automated silent installation of missing
     prerequisites (.NET 8 SDK, MySQL, Python). Automatically checks and initializes
     the MySQL schema and seed data. Launches the C# ASP.NET Core Minimal API
