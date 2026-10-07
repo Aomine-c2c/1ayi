@@ -1441,7 +1441,7 @@ export const farmManagerViews = {
             </div>
           </div>
           <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
-            This audit report summarizes the comprehensive cultivation metrics across Green Valley Model Farm and Rongai Sunrise Farm. Both properties have maintained strict adherence to irrigation schedules, leading to a 22% reduction in water consumption.
+            This audit report summarizes the comprehensive cultivation metrics across Mazowe Citrus & Grain Valley Estate and Marondera Evergreen Horticulture Farm in Zimbabwe Natural Region II. Both properties have maintained strict adherence to irrigation schedules, leading to a 22% reduction in water consumption.
           </p>
           <table class="data-table" style="margin-top: 16px;">
             <thead>

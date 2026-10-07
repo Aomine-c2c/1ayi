@@ -29,21 +29,21 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-# Check if backend (port 8000) is responding
-if ! curl -s -f "http://localhost:8000/api/v1/health" &>/dev/null; then
-    echo "Starting backend server on port 8000..."
-    bash "$SCRIPT_DIR/run-backend.sh" 8000 >/dev/null 2>&1 &
+# Check if backend (port 5050) is responding
+if ! curl -s -f "http://localhost:5050/api/v1/health" &>/dev/null; then
+    echo "Starting backend server on port 5050..."
+    bash "$SCRIPT_DIR/run-backend.sh" 5050 >/dev/null 2>&1 &
     BACKEND_PID=$!
     # Wait for backend health
     for i in {1..30}; do
-        if curl -s -f "http://localhost:8000/api/v1/health" &>/dev/null; then
-            echo "✓ Backend ready on http://localhost:8000"
+        if curl -s -f "http://localhost:5050/api/v1/health" &>/dev/null; then
+            echo "✓ Backend ready on http://localhost:5050"
             break
         fi
         sleep 1
     done
 else
-    echo "✓ Using running backend on http://localhost:8000"
+    echo "✓ Using running backend on http://localhost:5050"
 fi
 
 # Check if frontend (port 8080) is responding

@@ -97,7 +97,7 @@ export const authService = {
         email: 'sarah.mwangi@ayis.org', 
         phone: '+254 700 000 003',
         role: 'agronomist',
-        organization: 'Kenya Agricultural & Livestock Research Org (KALRO)',
+        organization: 'Department of Research & Specialist Services (DR&SS Zimbabwe)',
         bio: 'Senior agronomist focusing on crop phenology and hydrothermal suitability.',
         avatar: '🌾',
         notifications: { email: true, sms: true, weatherAlerts: true, advisoryUpdates: true },
@@ -111,7 +111,7 @@ export const authService = {
         email: 'grace.wanjiku@ayis.org', 
         phone: '+254 700 000 004',
         role: 'extension_officer',
-        organization: 'Nakuru County Agricultural Extension Service',
+        organization: 'AGRITEX Mashonaland Agricultural Extension Service',
         bio: 'Field extension specialist supporting 120+ smallholder maize & legume farms.',
         avatar: '👥',
         notifications: { email: true, sms: true, weatherAlerts: true, advisoryUpdates: true },
@@ -125,7 +125,7 @@ export const authService = {
         email: 'daniel.kiprop@ayis.org', 
         phone: '+254 700 000 005',
         role: 'weather_analyst',
-        organization: 'Kenya Meteorological Department / Agromet Division',
+        organization: 'Zimbabwe Meteorological Services Department (MSD)',
         bio: 'Meteorologist analyzing automated weather station networks and GDD.',
         avatar: '📡',
         notifications: { email: true, sms: false, weatherAlerts: true, advisoryUpdates: false },
@@ -1265,7 +1265,7 @@ export const fieldOperationService = {
             name: `${f.firstName || ''} ${f.lastName || ''}`.trim() || f.username,
             phone: f.phoneNumber || '+254 700 000 000',
             email: f.email,
-            location: farm.county ? `${farm.county}, Kenya` : 'Nakuru, Kenya',
+            location: farm.county ? `${farm.county}, Zimbabwe` : 'Mashonaland, Zimbabwe',
             farmName: farm.name || 'Model Demonstration Farm',
             farmId: farm.id || 'farm-001',
             areaHa: farm.totalAreaHectares || 10.0,
@@ -1788,7 +1788,7 @@ export const adminService = {
     return {
       sources: [
         { id: 'src-01', name: 'Regional AWS Automated Network', protocol: 'MQTT / HTTPS REST', endpoint: 'https://telemetry.ayis.org/v1/aws', updateFrequency: 'Every 15 minutes', status: 'ACTIVE', monitoredLocationsCount: 5, lastIngest: '30s ago', thresholdChecking: 'ENABLED' },
-        { id: 'src-02', name: 'Kenya Meteorological Dept (KMD) Synoptic Feed', protocol: 'WMO BUFR / FTP Push', endpoint: 'ftp://ftp.meteo.go.ke/synop', updateFrequency: 'Every 3 hours', status: 'ACTIVE', monitoredLocationsCount: 12, lastIngest: '45 mins ago', thresholdChecking: 'ENABLED' },
+        { id: 'src-02', name: 'Zimbabwe Meteorological Services Dept (MSD) Synoptic Feed', protocol: 'WMO BUFR / FTP Push', endpoint: 'ftp://ftp.weather.co.zw/synop', updateFrequency: 'Every 3 hours', status: 'ACTIVE', monitoredLocationsCount: 12, lastIngest: '45 mins ago', thresholdChecking: 'ENABLED' },
         { id: 'src-03', name: 'NOAA GFS Global Numerical Weather Prediction', protocol: 'GRIB2 NOAA OPeNDAP', endpoint: 'https://nomads.ncep.noaa.gov', updateFrequency: 'Every 6 hours', status: 'ACTIVE', monitoredLocationsCount: 1, lastIngest: '2 hours ago', thresholdChecking: 'ENABLED' }
       ],
       thresholds: [
@@ -1801,11 +1801,11 @@ export const adminService = {
   },
   async getPlatformSettings() {
     return {
-      general: { platformName: 'Agricultural Yield Production Monitoring System (AYIS)', organization: 'Kenya Agricultural & Livestock Research Organization (KALRO)', timezone: 'Africa/Nairobi (UTC+3)', language: 'English (Kenya)' },
+      general: { platformName: 'Agricultural Yield Production Monitoring System (AYIS)', organization: 'Department of Agricultural Technical and Extension Services (AGRITEX)', timezone: 'Africa/Harare (UTC+2)', language: 'English (Zimbabwe)' },
       units: { temperature: 'Celsius (°C)', rainfall: 'Millimeters (mm)', area: 'Hectares (ha)', yield: 'Metric Tonnes / ha (t/ha)', pressure: 'Hectopascals (hPa)', windSpeed: 'Kilometers per hour (km/h)' },
-      regional: { primaryCounty: 'Nakuru County', agroEcologicalZone: 'AEZ III / IV (Sub-humid to Semi-arid High Plains)', spatialSRID: 'EPSG:4326 (WGS84 GPS Native)' },
+      regional: { primaryCounty: 'Mashonaland Central Province', agroEcologicalZone: 'Natural Region II (Highveld Intensive Grain Belt)', spatialSRID: 'EPSG:4326 (WGS84 GPS Native)' },
       notifications: { emailNotifications: true, smsAlertBroadcasts: true, criticalAlertCooldownMinutes: 30, pushNotificationSound: true },
-      agricultural: { defaultGrowingSeason: 'Long Rains (March - September)', defaultGddBaseTempC: 10.0, soilMoistureFieldCapacityKpa: 33.0 }
+      agricultural: { defaultGrowingSeason: 'Summer Rains (October - April)', defaultGddBaseTempC: 10.0, soilMoistureFieldCapacityKpa: 33.0 }
     };
   }
 };
