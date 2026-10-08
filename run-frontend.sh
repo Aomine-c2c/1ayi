@@ -8,6 +8,23 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FRONTEND_DIR="$SCRIPT_DIR/frontend"
 REQUESTED_PORT="${1:-8080}"
 
+# Windows / Git Bash / MSYS detection:
+case "$(uname -s)" in
+    CYGWIN*|MINGW*|MSYS*)
+        PS_SCRIPT_PATH="$SCRIPT_DIR/run-frontend.ps1"
+        if command -v cygpath &>/dev/null; then
+            PS_SCRIPT_PATH=$(cygpath -w "$SCRIPT_DIR/run-frontend.ps1")
+        fi
+        if command -v powershell.exe &>/dev/null; then
+            exec powershell.exe -ExecutionPolicy Bypass -File "$PS_SCRIPT_PATH" -Port "$REQUESTED_PORT"
+            exit $?
+        elif command -v pwsh.exe &>/dev/null; then
+            exec pwsh.exe -ExecutionPolicy Bypass -File "$PS_SCRIPT_PATH" -Port "$REQUESTED_PORT"
+            exit $?
+        fi
+        ;;
+esac
+
 # Determine available port starting from requested port
 find_available_port() {
     local start_port="$1"

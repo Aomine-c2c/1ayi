@@ -41,17 +41,83 @@ if ($effectivePort -ne $Port) {
     Write-Host "Notice: Port $Port is in use. Automatically switched to port $effectivePort." -ForegroundColor Yellow
 }
 
-$pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+# Check for real working Python (skip Microsoft Store stub)
+$hasPython = $false
+$realPythonCmd = $null
+foreach ($cmd in @("python", "python3", "py")) {
+    $found = Get-Command $cmd -ErrorAction SilentlyContinue
+    if ($found) {
+        $ver = & $cmd --version 2>&1
+        if ($LASTEXITCODE -eq 0 -and $ver -match "Python\s+\d+") {
+            $hasPython = $true
+            $realPythonCmd = $cmd
+            break
+        }
+    }
+}
+
 $npxCmd = Get-Command npx -ErrorAction SilentlyContinue
 
-if ($pythonCmd) {
+if ($hasPython) {
     Write-Host "Serving frontend via Python on http://localhost:$effectivePort..." -ForegroundColor Green
-    python -m http.server $effectivePort --directory "$frontendDir"
+    & $realPythonCmd -m http.server $effectivePort --directory "$frontendDir"
 } elseif ($npxCmd) {
     Write-Host "Serving frontend via npx serve on http://localhost:$effectivePort..." -ForegroundColor Green
     npx serve "$frontendDir" -l $effectivePort
 } else {
-    Write-Warning "Neither Python nor Node/npx was found in PATH."
-    Write-Host "Opening index.html directly in your default browser..." -ForegroundColor Yellow
-    Start-Process (Join-Path $frontendDir "index.html")
+    Write-Host "No Python or Node web server detected. Starting built-in lightweight PowerShell web server on http://localhost:$effectivePort..." -ForegroundColor Green
+    
+    $httpListener = New-Object System.Net.HttpListener
+    $prefix = "http://localhost:$effectivePort/"
+    $httpListener.Prefixes.Add($prefix)
+    try {
+        $httpListener.Start()
+        Write-Host "AYIS Frontend is serving at $prefix (Press Ctrl+C to stop)..." -ForegroundColor Cyan
+        
+        $mimeTypes = @{
+            ".html" = "text/html; charset=utf-8";
+            ".css"  = "text/css; charset=utf-8";
+            ".js"   = "application/javascript; charset=utf-8";
+            ".json" = "application/json; charset=utf-8";
+            ".png"  = "image/png";
+            ".jpg"  = "image/jpeg";
+            ".jpeg" = "image/jpeg";
+            ".svg"  = "image/svg+xml";
+            ".ico"  = "image/x-icon";
+            ".woff" = "font/woff";
+            ".woff2"= "font/woff2"
+        }
+
+        while ($httpListener.IsListening) {
+            $context = $httpListener.GetContext()
+            $request = $context.Request
+            $response = $context.Response
+
+            $relPath = $request.Url.LocalPath.TrimStart('/')
+            if ([string]::IsNullOrWhiteSpace($relPath)) { $relPath = "index.html" }
+            $filePath = Join-Path $frontendDir $relPath
+
+            if (Test-Path $filePath -PathType Leaf) {
+                $ext = [System.IO.Path]::GetExtension($filePath).ToLower()
+                $response.ContentType = if ($mimeTypes.ContainsKey($ext)) { $mimeTypes[$ext] } else { "application/octet-stream" }
+                $bytes = [System.IO.File]::ReadAllBytes($filePath)
+                $response.ContentLength64 = $bytes.Length
+                $response.OutputStream.Write($bytes, 0, $bytes.Length)
+            } else {
+                $response.StatusCode = 404
+                $msg = [System.Text.Encoding]::UTF8.GetBytes("File Not Found")
+                $response.OutputStream.Write($msg, 0, $msg.Length)
+            }
+            $response.OutputStream.Close()
+        }
+    } catch {
+        Write-Warning "PowerShell HTTP listener encountered an issue: $_"
+        Write-Host "Opening index.html directly in browser..." -ForegroundColor Yellow
+        Start-Process (Join-Path $frontendDir "index.html")
+    } finally {
+        if ($httpListener -ne $null) {
+            try { $httpListener.Stop() } catch { }
+            try { $httpListener.Close() } catch { }
+        }
+    }
 }

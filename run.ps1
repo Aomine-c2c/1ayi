@@ -78,20 +78,30 @@ if (-not $hasDotNetSdk) {
 
 # B. Python 3 (or Node) Check for Web Server
 Write-Host "`n[2/3] Checking Python 3 / Web Server..." -ForegroundColor Cyan
-$pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-$python3Cmd = Get-Command python3 -ErrorAction SilentlyContinue
-$npxCmd = Get-Command npx -ErrorAction SilentlyContinue
-
-if (-not ($pythonCmd -or $python3Cmd -or $npxCmd)) {
-    Write-Warning "Neither Python nor Node/npx is installed."
-    Write-Host "Attempting automated installation of Python via winget..." -ForegroundColor Yellow
-    $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
-    if ($wingetCmd) {
-        winget install --id Python.Python.3.11 -e --silent --accept-package-agreements --accept-source-agreements
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+$hasPythonOrNode = $false
+foreach ($cmd in @("python", "python3", "py")) {
+    $found = Get-Command $cmd -ErrorAction SilentlyContinue
+    if ($found) {
+        $ver = & $cmd --version 2>&1
+        if ($LASTEXITCODE -eq 0 -and $ver -match "Python\s+\d+") {
+            $hasPythonOrNode = $true
+            Write-Host "-> Found Python: $ver" -ForegroundColor Green
+            break
+        }
     }
-} else {
-    Write-Host "-> Web server runtime found." -ForegroundColor Green
+}
+
+if (-not $hasPythonOrNode) {
+    $npxCmd = Get-Command npx -ErrorAction SilentlyContinue
+    if ($npxCmd) {
+        $hasPythonOrNode = $true
+        Write-Host "-> Found Node / npx web runtime." -ForegroundColor Green
+    }
+}
+
+if (-not $hasPythonOrNode) {
+    Write-Warning "Neither functional Python nor Node was found in PATH."
+    Write-Host "Notice: The runner includes a built-in PowerShell web server fallback, so the frontend will still serve cleanly." -ForegroundColor Yellow
 }
 
 # C. Database Verification & Initialization
@@ -118,21 +128,82 @@ if (Test-Path $setupDbScript) {
     }
 }
 
+# ── Function to check and free port or find next available port ──
+function Resolve-SafePort([int]$desiredPort, [string]$serviceName) {
+    # Check if port is in use
+    $inUse = $false
+    try {
+        $testListener = New-Object System.Net.Sockets.TcpListener ([System.Net.IPAddress]::Loopback), $desiredPort
+        $testListener.Start()
+        $testListener.Stop()
+    } catch {
+        $inUse = $true
+    }
+
+    if ($inUse) {
+        Write-Host "Notice: Port $desiredPort is currently occupied for $serviceName." -ForegroundColor Yellow
+        Write-Host "Attempting to auto-terminate orphaned process on port $desiredPort..." -ForegroundColor Yellow
+        try {
+            $connections = Get-NetTCPConnection -LocalPort $desiredPort -ErrorAction SilentlyContinue
+            if ($connections) {
+                foreach ($conn in $connections) {
+                    if ($conn.OwningProcess -and $conn.OwningProcess -gt 4) {
+                        Stop-Process -Id $conn.OwningProcess -Force -ErrorAction SilentlyContinue
+                    }
+                }
+                Start-Sleep -Milliseconds 800
+            }
+        } catch { }
+
+        # Verify if freed
+        try {
+            $testListener = New-Object System.Net.Sockets.TcpListener ([System.Net.IPAddress]::Loopback), $desiredPort
+            $testListener.Start()
+            $testListener.Stop()
+            Write-Host "-> Successfully freed port $desiredPort." -ForegroundColor Green
+            return $desiredPort
+        } catch {
+            # Find next free port
+            $nextPort = $desiredPort + 1
+            while ($nextPort -lt ($desiredPort + 100)) {
+                try {
+                    $testListener = New-Object System.Net.Sockets.TcpListener ([System.Net.IPAddress]::Loopback), $nextPort
+                    $testListener.Start()
+                    $testListener.Stop()
+                    Write-Host "-> Switched $serviceName to safe port: $nextPort" -ForegroundColor Cyan
+                    return $nextPort
+                } catch {
+                    $nextPort++
+                }
+            }
+        }
+    }
+    return $desiredPort
+}
+
+$EffectiveBackendPort = Resolve-SafePort $BackendPort "Backend API"
+$EffectiveFrontendPort = Resolve-SafePort $FrontendPort "Frontend"
+
 # ── 2. Launch Backend in Dedicated Terminal ──────────────────────
 Write-Host "`n==========================================================" -ForegroundColor Cyan
-Write-Host "Launching Services (Backend: $BackendPort, Frontend: $FrontendPort)..." -ForegroundColor Cyan
+Write-Host "Launching Services (Backend: $EffectiveBackendPort, Frontend: $EffectiveFrontendPort)..." -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 $backendScript = Join-Path $PSScriptRoot "run-backend.ps1"
 if (Test-Path $backendScript) {
     Write-Host "-> Starting C# Minimal API in a new terminal window..." -ForegroundColor Green
-    Start-Process powershell -ArgumentList "-NoExit", "-ExecutionPolicy", "Bypass", "-File `"$backendScript`" -Port $BackendPort"
-    Write-Host "   Local API: http://localhost:$BackendPort" -ForegroundColor Green
-    Write-Host "   Swagger:   http://localhost:$BackendPort/swagger" -ForegroundColor Cyan
+    Start-Process powershell -ArgumentList "-NoExit -ExecutionPolicy Bypass -File `"$backendScript`" -Port $EffectiveBackendPort"
+    Write-Host "   Local API: http://localhost:$EffectiveBackendPort" -ForegroundColor Green
+    Write-Host "   Swagger:   http://localhost:$EffectiveBackendPort/swagger" -ForegroundColor Cyan
 }
 
 # ── 3. Open Browser ──────────────────────────────────────────────
-$frontendUrl = "http://localhost:$FrontendPort"
+$frontendUrl = "http://localhost:$EffectiveFrontendPort"
+if ($EffectiveBackendPort -ne 5050) {
+    # If backend was shifted, pass the URL param so frontend auto-connects
+    $frontendUrl = "$frontendUrl/?api=http://localhost:$EffectiveBackendPort/api/v1"
+}
+
 if (-not $NoBrowser) {
     Start-Sleep -Seconds 2
     Write-Host "`nOpening $frontendUrl in default browser..." -ForegroundColor Green
@@ -142,5 +213,5 @@ if (-not $NoBrowser) {
 # ── 4. Serve Frontend in Current Window ─────────────────────────
 $frontendScript = Join-Path $PSScriptRoot "run-frontend.ps1"
 if (Test-Path $frontendScript) {
-    & powershell -ExecutionPolicy Bypass -File "$frontendScript" -Port $FrontendPort
+    & powershell -ExecutionPolicy Bypass -File "$frontendScript" -Port $EffectiveFrontendPort
 }

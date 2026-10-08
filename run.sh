@@ -3,6 +3,45 @@
 # AYIS (Agricultural Yield Production Monitoring System) — Unified System Runner
 # Compatible with Linux (Ubuntu, Debian, Fedora, Arch) and macOS
 # ==============================================================================
+# Universal Windows detection (MSYS, MINGW, UCRT64, CYGWIN, WSL, Git Bash, etc.)
+IS_WINDOWS=false
+if [ -n "$COMSPEC" ] || [ "$OS" = "Windows_NT" ]; then
+    IS_WINDOWS=true
+fi
+case "$(uname -s 2>/dev/null)" in
+    CYGWIN*|MINGW*|MSYS*|Windows*)
+        IS_WINDOWS=true
+        ;;
+esac
+
+if [ "$IS_WINDOWS" = true ]; then
+    echo "=========================================================="
+    echo "       AYIS Universal Cross-Platform Runner (Windows)     "
+    echo "=========================================================="
+    
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PS_SCRIPT_PATH="$SCRIPT_DIR/run.ps1"
+    if command -v cygpath &>/dev/null; then
+        PS_SCRIPT_PATH=$(cygpath -w "$SCRIPT_DIR/run.ps1")
+    fi
+    
+    # Try powershell.exe, pwsh.exe, or Windows system PowerShell
+    PS_CMD=""
+    if command -v powershell.exe &>/dev/null; then
+        PS_CMD="powershell.exe"
+    elif command -v pwsh.exe &>/dev/null; then
+        PS_CMD="pwsh.exe"
+    elif [ -x "/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe" ]; then
+        PS_CMD="/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe"
+    fi
+
+    if [ -n "$PS_CMD" ]; then
+        echo "Auto-delegating execution to native Windows runner (run.ps1)..."
+        exec "$PS_CMD" -ExecutionPolicy Bypass -File "$PS_SCRIPT_PATH" -FrontendPort "${1:-8080}" -BackendPort "${2:-5050}"
+        exit $?
+    fi
+fi
+
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
