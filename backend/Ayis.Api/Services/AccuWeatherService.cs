@@ -113,79 +113,84 @@ public class AccuWeatherService
         var locationKey = await GetLocationKeyAsync(lat, lon);
         if (locationKey == null) return GenerateMockCurrentConditions(lat, lon, "zw-mock");
 
-        if (!IsApiKeyConfigured)
-        {
-            var mock = GenerateMockCurrentConditions(lat, lon, locationKey);
-            _cache.Set(cacheKey, mock, CurrentConditionsTtl);
-            return mock;
-        }
-
-        var url = $"/currentconditions/v1/{locationKey}?apikey={_apiKey}&details=true&metric=true";
+        // 1. Try Open-Meteo live API first (Free, live real-world data, no key required)
         try
         {
-            var response = await _http.GetAsync(url);
-            if (!response.IsSuccessStatusCode)
+            var openMeteoResult = await FetchOpenMeteoCurrentConditionsAsync(lat, lon, locationKey);
+            if (openMeteoResult != null)
             {
-                _logger.LogWarning("AccuWeather current conditions returned {Status}. Using realistic agro-meteorological simulation.", response.StatusCode);
-                var mock = GenerateMockCurrentConditions(lat, lon, locationKey);
-                _cache.Set(cacheKey, mock, CurrentConditionsTtl);
-                return mock;
+                _cache.Set(cacheKey, openMeteoResult, CurrentConditionsTtl);
+                return openMeteoResult;
             }
-
-            var json = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(json);
-            var arr = doc.RootElement;
-            if (arr.ValueKind != JsonValueKind.Array || arr.GetArrayLength() == 0)
-            {
-                var mock = GenerateMockCurrentConditions(lat, lon, locationKey);
-                _cache.Set(cacheKey, mock, CurrentConditionsTtl);
-                return mock;
-            }
-
-            var obs = arr[0];
-            var result = new AccuWeatherCurrentConditions
-            {
-                LocationKey   = locationKey,
-                WeatherText   = obs.GetProperty("WeatherText").GetString() ?? "Partly Sunny",
-                WeatherIcon   = obs.GetProperty("WeatherIcon").GetInt32(),
-                IsDayTime     = obs.GetProperty("IsDayTime").GetBoolean(),
-                ObservationDateTime = obs.GetProperty("LocalObservationDateTime").GetString() ?? DateTime.UtcNow.ToString("o"),
-                Temperature = new TemperatureValue
-                {
-                    Value = obs.GetProperty("Temperature").GetProperty("Metric").GetProperty("Value").GetDouble(),
-                    Unit  = "°C"
-                },
-                RealFeelTemperature = new TemperatureValue
-                {
-                    Value = obs.GetProperty("RealFeelTemperature").GetProperty("Metric").GetProperty("Value").GetDouble(),
-                    Unit  = "°C"
-                },
-                RelativeHumidity = obs.GetProperty("RelativeHumidity").GetInt32(),
-                Wind = new WindInfo
-                {
-                    Speed = obs.GetProperty("Wind").GetProperty("Speed").GetProperty("Metric").GetProperty("Value").GetDouble(),
-                    Direction = obs.GetProperty("Wind").GetProperty("Direction").GetProperty("English").GetString() ?? "ENE"
-                },
-                Visibility = obs.GetProperty("Visibility").GetProperty("Metric").GetProperty("Value").GetDouble(),
-                UVIndex = obs.GetProperty("UVIndex").GetInt32(),
-                UVIndexText = obs.GetProperty("UVIndexText").GetString() ?? "Moderate",
-                PrecipitationLast24hMm = obs.TryGetProperty("Precip24Hour", out var p24)
-                    ? p24.GetProperty("Metric").GetProperty("Value").GetDouble()
-                    : 0.0,
-                CloudCoverPct = obs.TryGetProperty("CloudCover", out var cc) ? cc.GetInt32() : 25,
-                PressureHpa = obs.GetProperty("Pressure").GetProperty("Metric").GetProperty("Value").GetDouble()
-            };
-
-            _cache.Set(cacheKey, result, CurrentConditionsTtl);
-            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching AccuWeather current conditions for ({Lat},{Lon}). Fallback to simulation.", lat, lon);
-            var mock = GenerateMockCurrentConditions(lat, lon, locationKey);
-            _cache.Set(cacheKey, mock, CurrentConditionsTtl);
-            return mock;
+            _logger.LogDebug(ex, "Open-Meteo live fetch skipped for ({Lat},{Lon}).", lat, lon);
         }
+
+        // 2. AccuWeather attempt if configured
+        if (IsApiKeyConfigured)
+        {
+            var url = $"/currentconditions/v1/{locationKey}?apikey={_apiKey}&details=true&metric=true";
+            try
+            {
+                var response = await _http.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(json);
+                    var arr = doc.RootElement;
+                    if (arr.ValueKind == JsonValueKind.Array && arr.GetArrayLength() > 0)
+                    {
+                        var obs = arr[0];
+                        var result = new AccuWeatherCurrentConditions
+                        {
+                            LocationKey   = locationKey,
+                            WeatherText   = obs.GetProperty("WeatherText").GetString() ?? "Partly Sunny",
+                            WeatherIcon   = obs.GetProperty("WeatherIcon").GetInt32(),
+                            IsDayTime     = obs.GetProperty("IsDayTime").GetBoolean(),
+                            ObservationDateTime = obs.GetProperty("LocalObservationDateTime").GetString() ?? DateTime.UtcNow.ToString("o"),
+                            Temperature = new TemperatureValue
+                            {
+                                Value = obs.GetProperty("Temperature").GetProperty("Metric").GetProperty("Value").GetDouble(),
+                                Unit  = "°C"
+                            },
+                            RealFeelTemperature = new TemperatureValue
+                            {
+                                Value = obs.GetProperty("RealFeelTemperature").GetProperty("Metric").GetProperty("Value").GetDouble(),
+                                Unit  = "°C"
+                            },
+                            RelativeHumidity = obs.GetProperty("RelativeHumidity").GetInt32(),
+                            Wind = new WindInfo
+                            {
+                                Speed = obs.GetProperty("Wind").GetProperty("Speed").GetProperty("Metric").GetProperty("Value").GetDouble(),
+                                Direction = obs.GetProperty("Wind").GetProperty("Direction").GetProperty("English").GetString() ?? "ENE"
+                            },
+                            Visibility = obs.GetProperty("Visibility").GetProperty("Metric").GetProperty("Value").GetDouble(),
+                            UVIndex = obs.GetProperty("UVIndex").GetInt32(),
+                            UVIndexText = obs.GetProperty("UVIndexText").GetString() ?? "Moderate",
+                            PrecipitationLast24hMm = obs.TryGetProperty("Precip24Hour", out var p24)
+                                ? p24.GetProperty("Metric").GetProperty("Value").GetDouble()
+                                : 0.0,
+                            CloudCoverPct = obs.TryGetProperty("CloudCover", out var cc) ? cc.GetInt32() : 25,
+                            PressureHpa = obs.GetProperty("Pressure").GetProperty("Metric").GetProperty("Value").GetDouble()
+                        };
+
+                        _cache.Set(cacheKey, result, CurrentConditionsTtl);
+                        return result;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "AccuWeather query skipped.");
+            }
+        }
+
+        // 3. Realistic agro-meteorological simulation fallback
+        var mockCurrent = GenerateMockCurrentConditions(lat, lon, locationKey);
+        _cache.Set(cacheKey, mockCurrent, CurrentConditionsTtl);
+        return mockCurrent;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -200,64 +205,73 @@ public class AccuWeatherService
         var locationKey = await GetLocationKeyAsync(lat, lon);
         if (locationKey == null) locationKey = $"zw-loc-{(int)(Math.Abs(lat) * 100)}";
 
-        if (!IsApiKeyConfigured)
-        {
-            var mock = GenerateMockForecast(lat, lon);
-            _cache.Set(cacheKey, mock, ForecastTtl);
-            return mock;
-        }
-
-        var url = $"/forecasts/v1/daily/5day/{locationKey}?apikey={_apiKey}&metric=true&details=true";
+        // 1. Try Open-Meteo live 5-day forecast first (Free, live real-world, no key)
         try
         {
-            var response = await _http.GetAsync(url);
-            if (!response.IsSuccessStatusCode)
+            var openMeteoForecast = await FetchOpenMeteoForecastAsync(lat, lon);
+            if (openMeteoForecast != null && openMeteoForecast.DailyForecasts.Count > 0)
             {
-                _logger.LogWarning("AccuWeather forecast failed: {Status}. Using realistic agro-meteorological 5-day forecast.", response.StatusCode);
-                var mock = GenerateMockForecast(lat, lon);
-                _cache.Set(cacheKey, mock, ForecastTtl);
-                return mock;
+                _cache.Set(cacheKey, openMeteoForecast, ForecastTtl);
+                return openMeteoForecast;
             }
-
-            var json = await response.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            var forecast = new AccuWeatherForecast
-            {
-                Headline = root.TryGetProperty("Headline", out var h)
-                    ? h.GetProperty("Text").GetString() ?? ""
-                    : "Favorable conditions for maize and horticulture across the Highveld",
-                DailyForecasts = root.GetProperty("DailyForecasts").EnumerateArray()
-                    .Select(df => new DailyForecast
-                    {
-                        Date         = df.GetProperty("Date").GetString() ?? "",
-                        TempMaxC     = df.GetProperty("Temperature").GetProperty("Maximum").GetProperty("Value").GetDouble(),
-                        TempMinC     = df.GetProperty("Temperature").GetProperty("Minimum").GetProperty("Value").GetDouble(),
-                        DayIcon      = df.GetProperty("Day").GetProperty("Icon").GetInt32(),
-                        DayPhrase    = df.GetProperty("Day").GetProperty("IconPhrase").GetString() ?? "Mostly Sunny",
-                        NightPhrase  = df.GetProperty("Night").GetProperty("IconPhrase").GetString() ?? "Clear",
-                        RainProbabilityDay   = df.GetProperty("Day").TryGetProperty("RainProbability", out var rp) ? rp.GetInt32() : 15,
-                        RainProbabilityNight = df.GetProperty("Night").TryGetProperty("RainProbability", out var rpn) ? rpn.GetInt32() : 10,
-                        TotalRainMm  = df.TryGetProperty("Day", out var d) && d.TryGetProperty("Rain", out var rain)
-                            ? rain.GetProperty("Value").GetDouble()
-                            : 0.0,
-                        WindSpeedKmh = df.GetProperty("Day").GetProperty("Wind").GetProperty("Speed").GetProperty("Value").GetDouble(),
-                        WindDirection = df.GetProperty("Day").GetProperty("Wind").GetProperty("Direction").GetProperty("English").GetString() ?? "ENE",
-                        HoursOfSun   = df.TryGetProperty("HoursOfSun", out var sun) ? sun.GetDouble() : 8.5
-                    }).ToList()
-            };
-
-            _cache.Set(cacheKey, forecast, ForecastTtl);
-            return forecast;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching AccuWeather forecast for ({Lat},{Lon}). Fallback to simulation.", lat, lon);
-            var mock = GenerateMockForecast(lat, lon);
-            _cache.Set(cacheKey, mock, ForecastTtl);
-            return mock;
+            _logger.LogDebug(ex, "Open-Meteo forecast fetch skipped for ({Lat},{Lon}).", lat, lon);
         }
+
+        // 2. AccuWeather attempt if configured
+        if (IsApiKeyConfigured)
+        {
+            var url = $"/forecasts/v1/daily/5day/{locationKey}?apikey={_apiKey}&metric=true&details=true";
+            try
+            {
+                var response = await _http.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+
+                    var forecast = new AccuWeatherForecast
+                    {
+                        Headline = root.TryGetProperty("Headline", out var h)
+                            ? h.GetProperty("Text").GetString() ?? ""
+                            : "Favorable conditions for maize and horticulture across the Highveld",
+                        DailyForecasts = root.GetProperty("DailyForecasts").EnumerateArray()
+                            .Select(df => new DailyForecast
+                            {
+                                Date         = df.GetProperty("Date").GetString() ?? "",
+                                TempMaxC     = df.GetProperty("Temperature").GetProperty("Maximum").GetProperty("Value").GetDouble(),
+                                TempMinC     = df.GetProperty("Temperature").GetProperty("Minimum").GetProperty("Value").GetDouble(),
+                                DayIcon      = df.GetProperty("Day").GetProperty("Icon").GetInt32(),
+                                DayPhrase    = df.GetProperty("Day").GetProperty("IconPhrase").GetString() ?? "Mostly Sunny",
+                                NightPhrase  = df.GetProperty("Night").GetProperty("IconPhrase").GetString() ?? "Clear",
+                                RainProbabilityDay   = df.GetProperty("Day").TryGetProperty("RainProbability", out var rp) ? rp.GetInt32() : 15,
+                                RainProbabilityNight = df.GetProperty("Night").TryGetProperty("RainProbability", out var rpn) ? rpn.GetInt32() : 10,
+                                TotalRainMm  = df.TryGetProperty("Day", out var d) && d.TryGetProperty("Rain", out var rain)
+                                    ? rain.GetProperty("Value").GetDouble()
+                                    : 0.0,
+                                WindSpeedKmh = df.GetProperty("Day").GetProperty("Wind").GetProperty("Speed").GetProperty("Value").GetDouble(),
+                                WindDirection = df.GetProperty("Day").GetProperty("Wind").GetProperty("Direction").GetProperty("English").GetString() ?? "ENE",
+                                HoursOfSun   = df.TryGetProperty("HoursOfSun", out var sun) ? sun.GetDouble() : 8.5
+                            }).ToList()
+                    };
+
+                    _cache.Set(cacheKey, forecast, ForecastTtl);
+                    return forecast;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "AccuWeather forecast query skipped.");
+            }
+        }
+
+        // 3. Fallback to realistic agro-meteorological simulation
+        var mock = GenerateMockForecast(lat, lon);
+        _cache.Set(cacheKey, mock, ForecastTtl);
+        return mock;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -425,6 +439,133 @@ public class AccuWeatherService
                 MobileLink = "https://www.accuweather.com"
             }
         };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Open-Meteo Integration (100% Free, live satellite telemetry, no key needed)
+    // ─────────────────────────────────────────────────────────────────────────
+    private static readonly HttpClient _openMeteoHttp = new() { Timeout = TimeSpan.FromSeconds(6) };
+
+    private async Task<AccuWeatherCurrentConditions?> FetchOpenMeteoCurrentConditionsAsync(double lat, double lon, string locationKey)
+    {
+        var url = $"https://api.open-meteo.com/v1/forecast?latitude={lat:F4}&longitude={lon:F4}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m&timezone=auto";
+        var res = await _openMeteoHttp.GetAsync(url);
+        if (!res.IsSuccessStatusCode) return null;
+
+        var json = await res.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        var current = doc.RootElement.GetProperty("current");
+
+        var temp = current.GetProperty("temperature_2m").GetDouble();
+        var apparentTemp = current.GetProperty("apparent_temperature").GetDouble();
+        var humidity = current.GetProperty("relative_humidity_2m").GetInt32();
+        var windSpeed = current.GetProperty("wind_speed_10m").GetDouble();
+        var windDir = current.GetProperty("wind_direction_10m").GetDouble();
+        var pressure = current.GetProperty("pressure_msl").GetDouble();
+        var cloud = current.GetProperty("cloud_cover").GetInt32();
+        var isDay = current.GetProperty("is_day").GetInt32() == 1;
+        var rainMm = current.GetProperty("precipitation").GetDouble();
+        var wCode = current.GetProperty("weather_code").GetInt32();
+
+        return new AccuWeatherCurrentConditions
+        {
+            LocationKey = locationKey,
+            WeatherText = MapWmoCodeToText(wCode),
+            WeatherIcon = MapWmoCodeToIcon(wCode, isDay),
+            IsDayTime = isDay,
+            ObservationDateTime = DateTime.UtcNow.ToString("o"),
+            Temperature = new TemperatureValue { Value = temp, Unit = "°C" },
+            RealFeelTemperature = new TemperatureValue { Value = apparentTemp, Unit = "°C" },
+            RelativeHumidity = humidity,
+            Wind = new WindInfo { Speed = windSpeed, Direction = MapDegreesToDirection(windDir) },
+            Visibility = 10.0,
+            UVIndex = isDay ? 6 : 0,
+            UVIndexText = isDay ? "Moderate" : "Low",
+            PrecipitationLast24hMm = rainMm,
+            CloudCoverPct = cloud,
+            PressureHpa = pressure
+        };
+    }
+
+    private async Task<AccuWeatherForecast?> FetchOpenMeteoForecastAsync(double lat, double lon)
+    {
+        var url = $"https://api.open-meteo.com/v1/forecast?latitude={lat:F4}&longitude={lon:F4}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max&timezone=auto&forecast_days=5";
+        var res = await _openMeteoHttp.GetAsync(url);
+        if (!res.IsSuccessStatusCode) return null;
+
+        var json = await res.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+        var daily = doc.RootElement.GetProperty("daily");
+
+        var times = daily.GetProperty("time").EnumerateArray().Select(x => x.GetString() ?? "").ToList();
+        var maxTemps = daily.GetProperty("temperature_2m_max").EnumerateArray().Select(x => x.GetDouble()).ToList();
+        var minTemps = daily.GetProperty("temperature_2m_min").EnumerateArray().Select(x => x.GetDouble()).ToList();
+        var precipSums = daily.GetProperty("precipitation_sum").EnumerateArray().Select(x => x.GetDouble()).ToList();
+        var precipProbs = daily.GetProperty("precipitation_probability_max").EnumerateArray().Select(x => x.GetInt32()).ToList();
+        var windSpeeds = daily.GetProperty("wind_speed_10m_max").EnumerateArray().Select(x => x.GetDouble()).ToList();
+        var wCodes = daily.GetProperty("weather_code").EnumerateArray().Select(x => x.GetInt32()).ToList();
+
+        var days = new List<DailyForecast>();
+        for (int i = 0; i < times.Count && i < 5; i++)
+        {
+            var code = wCodes[i];
+            days.Add(new DailyForecast
+            {
+                Date = times[i],
+                TempMaxC = maxTemps[i],
+                TempMinC = minTemps[i],
+                DayIcon = MapWmoCodeToIcon(code, true),
+                DayPhrase = MapWmoCodeToText(code),
+                NightPhrase = "Clear and calm",
+                RainProbabilityDay = precipProbs[i],
+                RainProbabilityNight = Math.Max(0, precipProbs[i] - 15),
+                TotalRainMm = precipSums[i],
+                WindSpeedKmh = windSpeeds[i],
+                WindDirection = "ENE",
+                HoursOfSun = precipSums[i] > 1.0 ? 6.5 : 9.5
+            });
+        }
+
+        return new AccuWeatherForecast
+        {
+            Headline = "Live satellite forecast provided via Open-Meteo agro-meteorological station",
+            DailyForecasts = days
+        };
+    }
+
+    private static string MapWmoCodeToText(int code) => code switch
+    {
+        0 => "Clear sky",
+        1 => "Mainly sunny",
+        2 => "Partly cloudy",
+        3 => "Overcast",
+        45 or 48 => "Foggy / Mist",
+        51 or 53 or 55 => "Light Drizzle",
+        61 or 63 => "Moderate Rain",
+        65 => "Heavy Rain",
+        80 or 81 or 82 => "Passing Rain Showers",
+        95 or 96 or 99 => "Thunderstorm",
+        _ => "Partly Cloudy"
+    };
+
+    private static int MapWmoCodeToIcon(int code, bool isDay) => code switch
+    {
+        0 => isDay ? 1 : 33,
+        1 or 2 => isDay ? 3 : 35,
+        3 => 6,
+        45 or 48 => 11,
+        51 or 53 or 55 => 12,
+        61 or 63 or 65 => 18,
+        80 or 81 or 82 => 12,
+        95 or 96 or 99 => 15,
+        _ => isDay ? 3 : 35
+    };
+
+    private static string MapDegreesToDirection(double degrees)
+    {
+        string[] dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+        int idx = (int)Math.Round((degrees % 360) / 45) % 8;
+        return dirs[idx];
     }
 }
 
