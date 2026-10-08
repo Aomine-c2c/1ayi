@@ -106,7 +106,7 @@ if ($tableCount -and [int]$tableCount -gt 0) {
     return
 }
 
-Write-Host "`n1. Applying schema.sql to $MySqlHost:$MySqlPort..." -ForegroundColor Green
+Write-Host "`n1. Applying schema.sql to ${MySqlHost}:${MySqlPort}..." -ForegroundColor Green
 $schemaArgs = @("-h", $MySqlHost, "-P", $MySqlPort, "-u", $MySqlUser)
 if ($workingPassword) { $schemaArgs += "-p$workingPassword" }
 
