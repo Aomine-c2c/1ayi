@@ -21,14 +21,16 @@ function Get-AvailablePort([int]$startPort) {
     while ($portToCheck -lt ($startPort + 100)) {
         $tcpListener = $null
         try {
-            $tcpListener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $portToCheck)
+            $tcpListener = New-Object System.Net.Sockets.TcpListener ([System.Net.IPAddress]::Loopback), $portToCheck
             $tcpListener.Start()
             $tcpListener.Stop()
             return $portToCheck
         } catch {
             $portToCheck++
         } finally {
-            if ($tcpListener -ne $null) { $tcpListener.Dispose() }
+            if ($tcpListener -ne $null) {
+                try { $tcpListener.Stop() } catch { }
+            }
         }
     }
     return $startPort

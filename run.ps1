@@ -25,21 +25,37 @@ Write-Host "==========================================================" -Foregro
 
 # ── 1. Pre-flight Checks & Silent Auto-Installation ─────────────
 
-# A. .NET 8 SDK Check
-Write-Host "`n[1/3] Checking .NET 8 SDK..." -ForegroundColor Cyan
-$dotnetCmd = Get-Command dotnet -ErrorAction SilentlyContinue
-$hasDotNet8 = $false
-
-if ($dotnetCmd) {
-    $sdks = dotnet --list-sdks 2>$null
-    if ($sdks -match "^8\.") {
-        $hasDotNet8 = $true
-        Write-Host "-> Found .NET 8 SDK: $(dotnet --version)" -ForegroundColor Green
+# Ensure dotnet in PATH if standard Windows install exists
+if (Test-Path "C:\Program Files\dotnet") {
+    if ($env:Path -notlike "*C:\Program Files\dotnet*") {
+        $env:Path = "C:\Program Files\dotnet;" + $env:Path
     }
 }
 
-if (-not $hasDotNet8) {
-    Write-Warning ".NET 8 SDK not found."
+# A. .NET 8 SDK Check
+Write-Host "`n[1/3] Checking .NET 8 SDK..." -ForegroundColor Cyan
+$dotnetCmd = Get-Command dotnet -ErrorAction SilentlyContinue
+if (-not $dotnetCmd -and (Test-Path "C:\Program Files\dotnet\dotnet.exe")) {
+    $dotnetCmd = "C:\Program Files\dotnet\dotnet.exe"
+}
+
+$hasDotNetSdk = $false
+$installedSdks = @()
+
+if ($dotnetCmd) {
+    try {
+        $rawSdks = & $dotnetCmd --list-sdks 2>$null
+        if ($rawSdks) {
+            $installedSdks = $rawSdks
+            $hasDotNetSdk = $true
+            Write-Host "-> Found installed .NET SDK(s):" -ForegroundColor Green
+            $installedSdks | ForEach-Object { Write-Host "   - $_" -ForegroundColor Green }
+        }
+    } catch { }
+}
+
+if (-not $hasDotNetSdk) {
+    Write-Warning ".NET SDK was not detected (required to build and run C# backend)."
     Write-Host "Attempting automated installation via winget/choco..." -ForegroundColor Yellow
     
     $wingetCmd = Get-Command winget -ErrorAction SilentlyContinue
@@ -57,7 +73,7 @@ if (-not $hasDotNet8) {
     }
     
     # Refresh PATH environment variable
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    $env:Path = "C:\Program Files\dotnet;" + [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 }
 
 # B. Python 3 (or Node) Check for Web Server
