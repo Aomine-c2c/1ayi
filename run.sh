@@ -231,6 +231,17 @@ check_dotnet
 check_python
 check_database
 
+# ── Auto-generate Offline Presentation Bundle (if not already generated) ───
+OFFLINE_ZIP="$SCRIPT_DIR/dist/AYIS-Offline-Package-Windows.zip"
+if [ ! -f "$OFFLINE_ZIP" ]; then
+    echo ""
+    echo "=========================================================="
+    echo " Generating 1-Click Offline Presentation Package in background..."
+    echo " (Only done once — subsequent runs will skip this step)"
+    echo "=========================================================="
+    "$SCRIPT_DIR/package-offline.sh" >/dev/null 2>&1 &
+fi
+
 # ── Port and Process Management ────────────────────────────────
 
 free_port() {

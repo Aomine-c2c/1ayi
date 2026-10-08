@@ -128,6 +128,15 @@ if (Test-Path $setupDbScript) {
     }
 }
 
+# ── Auto-generate Offline Presentation Bundle (if not already generated) ───
+$offlineZip = Join-Path $PSScriptRoot "dist\AYIS-Offline-Package-Windows.zip"
+$pkgScript = Join-Path $PSScriptRoot "package-offline.ps1"
+if (-not (Test-Path $offlineZip) -and (Test-Path $pkgScript)) {
+    Write-Host "`nNotice: Generating 1-Click Offline Presentation Package in background..." -ForegroundColor Yellow
+    Write-Host "(This runs once in the background and won't delay service launch)" -ForegroundColor Gray
+    Start-Process powershell -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$pkgScript`" -CreateZip"
+}
+
 # Proactively terminate any dangling Ayis.Api background processes to release binary locks
 Get-Process -Name "Ayis.Api" -ErrorAction SilentlyContinue | ForEach-Object {
     try { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue } catch { }
