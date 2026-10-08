@@ -52,6 +52,18 @@ if (-not $sdks) {
 Write-Host "Detected .NET SDKs:" -ForegroundColor Gray
 $sdks | ForEach-Object { Write-Host " - $_" -ForegroundColor Gray }
 
+# Terminate any dangling/orphaned Ayis.Api processes to release locks on Ayis.Api.exe
+$lockedProcs = Get-Process -Name "Ayis.Api" -ErrorAction SilentlyContinue
+if ($lockedProcs) {
+    Write-Host "Notice: Found running instance(s) of Ayis.Api. Terminating to release file locks..." -ForegroundColor Yellow
+    foreach ($p in $lockedProcs) {
+        try {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+        } catch { }
+    }
+    Start-Sleep -Milliseconds 800
+}
+
 Write-Host "`nRestoring NuGet packages..." -ForegroundColor Green
 & $dotnetCmd restore
 if ($LASTEXITCODE -ne 0) {

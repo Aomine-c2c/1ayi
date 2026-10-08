@@ -128,6 +128,11 @@ if (Test-Path $setupDbScript) {
     }
 }
 
+# Proactively terminate any dangling Ayis.Api background processes to release binary locks
+Get-Process -Name "Ayis.Api" -ErrorAction SilentlyContinue | ForEach-Object {
+    try { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue } catch { }
+}
+
 # ── Function to check and free port or find next available port ──
 function Resolve-SafePort([int]$desiredPort, [string]$serviceName) {
     # Check if port is in use
