@@ -170,3 +170,40 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```powershell
 .\run.ps1 -FrontendPort 8085 -BackendPort 5055
 ```
+
+---
+
+## 🎒 6. 100% Offline Presentation Package (For Lecturers / Offline Demos)
+
+For presenting to lecturers or demonstrating in air-gapped classrooms with **no internet access, no data, and no preinstalled developer tools (.NET SDK, Node, Python, MySQL)**:
+
+### ⚡ Automatic Generation
+When you run `./run.sh` or `.\run.ps1` on your machine, it **automatically builds the offline presentation bundle in the background** (only once):
+- Output folder: `dist/AYIS-Offline-Package/`
+- Output archive: `dist/AYIS-Offline-Package-Windows.zip` (~45 MB)
+
+*(Subsequent runs detect the existing bundle and skip building to ensure instant startup).*
+
+### 🛠️ Manual Generation
+You can also generate the standalone bundle on-demand at any time:
+```bash
+# On Linux / macOS / Git Bash:
+./package-offline.sh
+
+# On Windows PowerShell:
+.\package-offline.ps1 -CreateZip
+```
+
+### 📋 How the Lecturer or Student Uses It:
+1. Copy `AYIS-Offline-Package-Windows.zip` to the target PC via flash drive or local transfer.
+2. Extract the ZIP.
+3. Double-click **`START_PRESENTATION.bat`**.
+4. The dashboard opens at `http://localhost:8080` with embedded SQLite, offline Leaflet GIS maps, and realistic agro-meteorological simulation active.
+
+---
+
+## 🛰️ 7. Live Weather Provider (Open-Meteo & Agro-Meteorology)
+
+- **Real Live Satellite Weather**: Powered by **Open-Meteo** (`api.open-meteo.com`). Fetches live temperatures, humidity, wind direction, rainfall, and 5-day forecasts worldwide with **zero API key required**.
+- **Offline / Disconnected Graceful Fallback**: If internet connectivity is absent, the backend automatically transitions to an embedded **Zimbabwean Agro-Meteorological Simulation Model** (calibrated for Harare, Mashonaland, and Natural Regions I–V). The user interface remains fully populated without throwing connection errors.
+

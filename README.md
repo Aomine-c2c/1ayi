@@ -24,8 +24,10 @@
 10. [Default Seed Credentials & Test Accounts](#-default-seed-credentials--test-accounts)
 11. [Configuration & Environment Variables](#-configuration--environment-variables)
 12. [Port Management & Automatic Fallback](#-port-management--automatic-fallback)
-13. [Troubleshooting](#-troubleshooting)
-14. [License & Contribution](#-license--contribution)
+13. [100% Offline Presentation Mode (Lecturer Package)](#-100-offline-presentation-mode-lecturer-package)
+14. [Live Satellite Weather Engine (Open-Meteo)](#-live-satellite-weather-engine-open-meteo)
+15. [Troubleshooting](#-troubleshooting)
+16. [License & Contribution](#-license--contribution)
 
 ---
 
@@ -432,7 +434,32 @@ To prevent startup crashes caused by `Address already in use` errors (e.g. from 
 
 ---
 
-## 🛠️ Troubleshooting
+## 🎒 13. 100% Offline Presentation Mode (Lecturer Package)
+
+For air-gapped classrooms, disconnected lecture theaters, or presenting to professors without needing mobile data or Wi-Fi:
+
+- **Zero-Dependency Bundle**: Compiles the backend into a **self-contained Windows executable** (`Ayis.Api.exe`) containing the entire .NET 8 runtime. The target PC does **not** need the .NET SDK, Python, Node, or MySQL installed.
+- **Embedded SQLite Database**: Pre-seeded with full agricultural parcels, field divisions, crop catalog varieties, and telemetry.
+- **Local Vendor GIS Assets**: Leaflet GIS map libraries are bundled directly in `frontend/assets/vendor/`, eliminating CDN dependencies.
+- **Simultaneous Auto-Generation**: Executing `./run.sh` or `.\run.ps1` runs the system immediately while generating `dist/AYIS-Offline-Package-Windows.zip` in the background (only once).
+
+### Quick Usage:
+1. Double-click `dist/AYIS-Offline-Package/START_PRESENTATION.bat`.
+2. The system starts and automatically launches your browser to `http://localhost:8080`.
+3. Log in with `admin` / `Admin@123!` or `farmer1` / `Farmer@123!`.
+
+---
+
+## 🛰️ 14. Live Satellite Weather Engine (Open-Meteo)
+
+AYIS provides real-time agro-meteorology and 5-day predictive forecasts powered by **Open-Meteo**:
+- **100% Free Live Satellite Telemetry**: No API key or registration required.
+- **Metrics Tracked**: Live temperatures, apparent feels-like temperatures, relative humidity, wind velocity and compass directions, barometric pressure, precipitation sums, and WMO agro-weather codes.
+- **Graceful Offline Fallback**: If the network is unavailable, the backend automatically transitions to an embedded **Zimbabwean Agro-Meteorological Simulation Model** calibrated for Natural Regions I through V.
+
+---
+
+## 🛠️ 15. Troubleshooting
 
 ### 1. MySQL Connection Failed
 **Symptom:** Backend logs show `MySqlException: Unable to connect to any of the specified MySQL hosts.`  
