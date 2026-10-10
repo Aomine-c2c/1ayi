@@ -279,5 +279,88 @@ public class ApiEndpointTests : IClassFixture<AyisApiFactory>
         var response = await _client.SendAsync(request);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
+
+    [Fact]
+    public async Task Register_NewFarmer_Succeeds_AndCanLoginImmediatelyWithSameDetails()
+    {
+        var uniqueSuffix = Guid.NewGuid().ToString()[..6];
+        var username = $"farmer_{uniqueSuffix}";
+        var email = $"farmer_{uniqueSuffix}@testfarms.ke";
+        var password = "SecureFarmerPass123!";
+
+        // 1. Register new farmer
+        var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest
+        {
+            Username = username,
+            Email = email,
+            Password = password,
+            FirstName = "Chipo",
+            LastName = "Matarutse",
+            PhoneNumber = "+263 77 999 1111",
+            Role = "farmer"
+        });
+
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var regBody = await registerResponse.Content.ReadAsStringAsync();
+        regBody.Should().Contain("Registration successful");
+        regBody.Should().Contain(username);
+
+        // 2. Login immediately with the exact same details
+        var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/token", new LoginRequest(username, password));
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var loginDoc = await loginResponse.Content.ReadFromJsonAsync<JsonElement>();
+        loginDoc.GetProperty("access_token").GetString().Should().NotBeNullOrWhiteSpace();
+        loginDoc.GetProperty("user").GetProperty("username").GetString().Should().Be(username);
+        loginDoc.GetProperty("user").GetProperty("role").GetString().Should().Be("farmer");
+    }
+
+    [Fact]
+    public async Task Register_AdministrativeRole_RequiresApproval_AndBlocksLoginUntilApproved()
+    {
+        var uniqueSuffix = Guid.NewGuid().ToString()[..6];
+        var username = $"sysadmin_{uniqueSuffix}";
+        var email = $"sysadmin_{uniqueSuffix}@ayis.org";
+        var password = "SuperSecretAdminPass123!";
+
+        // 1. Register administrative user
+        var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest
+        {
+            Username = username,
+            Email = email,
+            Password = password,
+            FirstName = "Tinashe",
+            LastName = "Gumbo",
+            Role = "system_admin"
+        });
+
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var regBody = await registerResponse.Content.ReadAsStringAsync();
+        regBody.Should().Contain("requires administrator approval");
+
+        // 2. Login attempt should return 403 Forbidden with pending approval notice
+        var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/token", new LoginRequest(username, password));
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var loginBody = await loginResponse.Content.ReadAsStringAsync();
+        loginBody.Should().Contain("Account is pending administrator approval before you can sign in.");
+    }
+
+    [Fact]
+    public async Task Register_DuplicateUsername_ReturnsConflict()
+    {
+        var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest
+        {
+            Username = "johnk", // Already seeded in SQLite
+            Email = "new_unique_email@farms.ke",
+            Password = "Password123!",
+            Role = "farmer"
+        });
+
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var body = await registerResponse.Content.ReadAsStringAsync();
+        body.Should().Contain("Username is already taken");
+    }
 }
+
 

@@ -24,7 +24,8 @@ export const authViews = {
   // =========================================================================
   // 1. LOGIN MODAL & WORKFLOW
   // =========================================================================
-  showLoginModal(onSuccess) {
+  showLoginModal(onSuccess, options = {}) {
+    const { initialUsername = '', initialNotice = '', alertType: defaultAlertType = 'success' } = options;
     let overlay = document.getElementById('globalModalOverlay');
     if (!overlay) {
       overlay = document.createElement('div');
@@ -56,7 +57,13 @@ export const authViews = {
       { role: 'super_admin', username: 'chief', firstName: 'Chief', lastName: 'Agrotechnologist' }
     ];
 
+    let currentUsernameValue = initialUsername || 'sarah.mwangi@ayis.org';
+    let currentPasswordValue = initialUsername ? '' : 'Password123!';
+
     const renderLoginForm = (errorMsg = '', alertType = 'critical', isSubmitting = false) => {
+      const activeNotice = errorMsg || initialNotice;
+      const effectiveAlertType = errorMsg ? alertType : defaultAlertType;
+
       overlay.innerHTML = `
         <div class="modal-window" role="dialog" aria-modal="true" style="max-width: 520px; width: 100%;">
           <div class="modal-header">
@@ -71,10 +78,10 @@ export const authViews = {
           </div>
           
           <div class="modal-body" style="padding-top: 16px;">
-            ${errorMsg ? `
-              <div role="alert" style="background: ${alertType === 'warning' ? 'var(--accent-amber-light)' : 'var(--accent-rose-light)'}; border: 1px solid ${alertType === 'warning' ? '#fcd34d' : '#fda4af'}; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 16px; font-size: 0.8125rem; color: ${alertType === 'warning' ? 'var(--accent-amber)' : 'var(--accent-rose)'}; display: flex; align-items: flex-start; gap: 8px;">
-                <span style="font-size: 1.1rem; line-height: 1;">${alertType === 'warning' ? '⚠️' : '🚨'}</span>
-                <div>${errorMsg}</div>
+            ${activeNotice ? `
+              <div role="alert" style="background: ${effectiveAlertType === 'success' ? 'var(--primary-light)' : (effectiveAlertType === 'warning' ? 'var(--accent-amber-light)' : 'var(--accent-rose-light)')}; border: 1px solid ${effectiveAlertType === 'success' ? '#6ee7b7' : (effectiveAlertType === 'warning' ? '#fcd34d' : '#fda4af')}; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 16px; font-size: 0.8125rem; color: ${effectiveAlertType === 'success' ? 'var(--primary-dark)' : (effectiveAlertType === 'warning' ? 'var(--accent-amber)' : 'var(--accent-rose)')}; display: flex; align-items: flex-start; gap: 8px;">
+                <span style="font-size: 1.1rem; line-height: 1;">${effectiveAlertType === 'success' ? '✅' : (effectiveAlertType === 'warning' ? '⚠️' : '🚨')}</span>
+                <div>${activeNotice}</div>
               </div>
             ` : ''}
 
@@ -138,7 +145,7 @@ export const authViews = {
                   name="emailOrUsername" 
                   type="text" 
                   placeholder="e.g. sarah.mwangi@ayis.org or farmer" 
-                  value="sarah.mwangi@ayis.org"
+                  value="${currentUsernameValue}"
                   required
                   ${isSubmitting ? 'disabled' : ''}
                 >
@@ -158,7 +165,8 @@ export const authViews = {
                     id="loginInputPass" 
                     name="password" 
                     type="password" 
-                    value="Password123!" 
+                    value="${currentPasswordValue}" 
+                    placeholder="Enter account password"
                     style="padding-right: 44px;"
                     required
                     ${isSubmitting ? 'disabled' : ''}
@@ -172,7 +180,7 @@ export const authViews = {
                     👁️
                   </button>
                 </div>
-                <span class="form-hint">Tip: test password 'wrong' to trigger invalid credentials state.</span>
+                <span class="form-hint">Enter your password to sign in.</span>
               </div>
 
               <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px;">
@@ -202,9 +210,9 @@ export const authViews = {
           </div>
 
           <div style="padding: 12px 24px 18px; border-top: 1px solid var(--border-subtle); background: var(--bg-primary); text-align: center; font-size: 0.8125rem; color: var(--text-muted);">
-            New farmer or producer? 
-            <button type="button" id="btnLaunchOnboardFromLogin" style="background: transparent; border: none; color: var(--primary-dark); font-weight: 800; cursor: pointer; margin-left: 4px;">
-              Start Farmer Registration →
+            Don't have an account yet? 
+            <button type="button" id="btnLaunchRegisterFromLogin" style="background: transparent; border: none; color: var(--primary-dark); font-weight: 800; cursor: pointer; margin-left: 4px;">
+              Create an Account →
             </button>
           </div>
         </div>
@@ -228,9 +236,9 @@ export const authViews = {
         authViews.showForgotPasswordModal();
       });
 
-      overlay.querySelector('#btnLaunchOnboardFromLogin')?.addEventListener('click', () => {
+      overlay.querySelector('#btnLaunchRegisterFromLogin')?.addEventListener('click', () => {
         overlay.classList.remove('active');
-        authViews.showFarmerOnboardingWizard(onSuccess);
+        window.location.hash = '#register';
       });
 
       // Common login execution helper
@@ -303,6 +311,470 @@ export const authViews = {
     }).catch(err => {
       console.warn('[authViews] Demo users database fetch fallback:', err);
     });
+  },
+
+  // =========================================================================
+  // 1B. FULL MULTI-STEP USER REGISTRATION VIEW (#register)
+  // =========================================================================
+  renderRegisterView(container) {
+    let currentStep = 1;
+    const totalSteps = 3;
+    let isSubmitting = false;
+
+    const formData = {
+      // Step 1
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      // Step 2
+      firstName: '',
+      lastName: '',
+      phoneNumber: '',
+      role: 'farmer'
+    };
+
+    const rolesList = [
+      { id: 'farmer', title: 'Smallholder Farmer', icon: '🌾', desc: 'Direct access to smart yield advisories, crop calendar, and weather intelligence.', requiresApproval: false },
+      { id: 'agronomist', title: 'Agronomist & Specialist', icon: '🔬', desc: 'Crop disease diagnostics, suitability models, and recommendation pipelines.', requiresApproval: false },
+      { id: 'extension_officer', title: 'Extension Officer', icon: '🤝', desc: 'Field inspections, farmer outreach registry, and county advisory dissemination.', requiresApproval: false },
+      { id: 'farm_manager', title: 'Commercial Farm Manager', icon: '🚜', desc: 'Estate parcels, multi-field cycle operations, and labor scheduling.', requiresApproval: false },
+      { id: 'weather_analyst', title: 'Weather Analyst', icon: '⛅', desc: 'Meteorological telemetry stations, sensor QA, and early warning blasts.', requiresApproval: false },
+      { id: 'field_officer', title: 'Field Compliance Officer', icon: '📋', desc: 'GAP certifications, pest scouting records, and soil audits.', requiresApproval: false },
+      { id: 'system_admin', title: 'System Administrator', icon: '🛡️', desc: 'Administrative control, user provisioning, and audit logs. Requires administrator approval.', requiresApproval: true },
+      { id: 'super_admin', title: 'Super Administrator', icon: '👑', desc: 'Executive agricultural governance and system configuration. Requires administrator approval.', requiresApproval: true }
+    ];
+
+    const calculatePasswordStrength = (pass) => {
+      if (!pass) return { score: 0, text: 'Empty', color: '#94a3b8' };
+      let score = 0;
+      if (pass.length >= 6) score++;
+      if (pass.length >= 10) score++;
+      if (/[A-Z]/.test(pass)) score++;
+      if (/[0-9]/.test(pass)) score++;
+      if (/[^A-Za-z0-9]/.test(pass)) score++;
+
+      if (score <= 1) return { score: 1, text: 'Weak', color: '#ef4444' };
+      if (score <= 3) return { score: 2, text: 'Fair', color: '#f59e0b' };
+      if (score === 4) return { score: 3, text: 'Good', color: '#3b82f6' };
+      return { score: 4, text: 'Strong', color: '#10b981' };
+    };
+
+    const render = (errorMsg = '', alertType = 'critical') => {
+      const selectedRoleMeta = rolesList.find(r => r.id === formData.role) || rolesList[0];
+      const strength = calculatePasswordStrength(formData.password);
+
+      container.innerHTML = `
+        <div class="register-view-container" style="max-width: 780px; margin: 32px auto; padding: 0 16px;">
+          <!-- Header Banner -->
+          <div style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); border-radius: var(--radius-md) var(--radius-md) 0 0; padding: 28px 32px; color: #fff; position: relative; overflow: hidden; box-shadow: var(--shadow-sm);">
+            <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                  <span style="font-size: 1.5rem;">🌱</span>
+                  <span class="badge badge-green" style="background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.3); font-size: 0.72rem; letter-spacing: 0.5px;">AYIS USER REGISTRATION</span>
+                </div>
+                <h1 style="font-size: 1.6rem; font-weight: 800; color: #fff; margin: 0 0 6px 0; letter-spacing: -0.5px;">Create Your Account</h1>
+                <p style="font-size: 0.875rem; color: #a7f3d0; margin: 0; max-width: 500px;">
+                  Join the Zimbabwe Agricultural Yield Intelligence Platform to access real-time agromet telemetry and crop models.
+                </p>
+              </div>
+              <div style="text-align: right;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: #d1fae5; text-transform: uppercase;">Step ${currentStep} of ${totalSteps}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Wizard Progress Stepper -->
+          <div style="background: var(--bg-secondary); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 16px 32px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+              <div style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; background: ${currentStep >= 1 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 1 ? '#fff' : 'var(--text-muted)'};">1</div>
+              <div style="font-size: 0.8rem; font-weight: ${currentStep === 1 ? '800' : '600'}; color: ${currentStep >= 1 ? 'var(--text-primary)' : 'var(--text-muted)'};">Account Credentials</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+              <div style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; background: ${currentStep >= 2 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 2 ? '#fff' : 'var(--text-muted)'};">2</div>
+              <div style="font-size: 0.8rem; font-weight: ${currentStep === 2 ? '800' : '600'}; color: ${currentStep >= 2 ? 'var(--text-primary)' : 'var(--text-muted)'};">Profile & Role</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+              <div style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; background: ${currentStep >= 3 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 3 ? '#fff' : 'var(--text-muted)'};">3</div>
+              <div style="font-size: 0.8rem; font-weight: ${currentStep === 3 ? '800' : '600'}; color: ${currentStep >= 3 ? 'var(--text-primary)' : 'var(--text-muted)'};">Verification & Submit</div>
+            </div>
+          </div>
+
+          <!-- Wizard Body -->
+          <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 var(--radius-md) var(--radius-md); padding: 32px; box-shadow: var(--shadow-sm);">
+            ${errorMsg ? `
+              <div role="alert" style="background: ${alertType === 'warning' ? 'var(--accent-amber-light)' : 'var(--accent-rose-light)'}; border: 1px solid ${alertType === 'warning' ? '#fcd34d' : '#fda4af'}; border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 24px; font-size: 0.85rem; color: ${alertType === 'warning' ? 'var(--accent-amber)' : 'var(--accent-rose)'}; display: flex; align-items: flex-start; gap: 10px;">
+                <span style="font-size: 1.15rem; line-height: 1;">${alertType === 'warning' ? '⚠️' : '🚨'}</span>
+                <div>${errorMsg}</div>
+              </div>
+            ` : ''}
+
+            <!-- Step 1: Account Credentials -->
+            ${currentStep === 1 ? `
+              <div>
+                <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin: 0 0 16px 0;">Step 1: Account Credentials</h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+                  Choose a unique system username, valid contact email, and secure password for platform access.
+                </p>
+
+                <div class="form-group" style="margin-bottom: 18px;">
+                  <label class="form-label" for="regUsername">Username <span style="color: var(--accent-rose);">*</span></label>
+                  <input class="form-input" id="regUsername" type="text" placeholder="e.g. simonm, agronomist_ruth" value="${formData.username}" required>
+                  <span class="form-hint">Used for sign in. Minimum 3 characters (letters, numbers, underscore).</span>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 18px;">
+                  <label class="form-label" for="regEmail">Email Address <span style="color: var(--accent-rose);">*</span></label>
+                  <input class="form-input" id="regEmail" type="email" placeholder="e.g. name@domain.com" value="${formData.email}" required>
+                  <span class="form-hint">Must be a valid email format for system alerts and recovery.</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="regPassword">Password <span style="color: var(--accent-rose);">*</span></label>
+                    <div style="position: relative;">
+                      <input class="form-input" id="regPassword" type="password" placeholder="At least 6 characters" value="${formData.password}" style="padding-right: 40px;" required>
+                      <button type="button" id="btnToggleRegPass" style="position: absolute; right: 8px; top: 9px; background: transparent; border: none; cursor: pointer; color: var(--text-muted); font-size: 0.95rem;">👁️</button>
+                    </div>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="regConfirmPassword">Confirm Password <span style="color: var(--accent-rose);">*</span></label>
+                    <input class="form-input" id="regConfirmPassword" type="password" placeholder="Re-enter password" value="${formData.confirmPassword}" required>
+                  </div>
+                </div>
+
+                <!-- Password Strength Meter -->
+                <div style="background: var(--bg-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 24px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted);">PASSWORD STRENGTH:</span>
+                    <span style="font-size: 0.75rem; font-weight: 800; color: ${strength.color};">${strength.text}</span>
+                  </div>
+                  <div style="height: 6px; background: var(--border-color); border-radius: 9999px; overflow: hidden; display: flex; gap: 4px;">
+                    <div style="flex: 1; background: ${strength.score >= 1 ? strength.color : 'transparent'};"></div>
+                    <div style="flex: 1; background: ${strength.score >= 2 ? strength.color : 'transparent'};"></div>
+                    <div style="flex: 1; background: ${strength.score >= 3 ? strength.color : 'transparent'};"></div>
+                    <div style="flex: 1; background: ${strength.score >= 4 ? strength.color : 'transparent'};"></div>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Step 2: Profile & Role Details -->
+            ${currentStep === 2 ? `
+              <div>
+                <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin: 0 0 16px 0;">Step 2: Profile Details & Role Assignment</h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+                  Specify your personal profile details and select which operational role you fulfill.
+                </p>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="regFirstName">First Name</label>
+                    <input class="form-input" id="regFirstName" type="text" placeholder="e.g. Tendai" value="${formData.firstName}">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" for="regLastName">Last Name</label>
+                    <input class="form-input" id="regLastName" type="text" placeholder="e.g. Moyo" value="${formData.lastName}">
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 24px;">
+                  <label class="form-label" for="regPhone">Contact Phone Number (Optional)</label>
+                  <input class="form-input" id="regPhone" type="tel" placeholder="e.g. +263 77 123 4567" value="${formData.phoneNumber}">
+                  <span class="form-hint">Used for critical frost/drought SMS broadcasts and dispatch notifications.</span>
+                </div>
+
+                <label class="form-label" style="margin-bottom: 10px;">Select Your Platform Role <span style="color: var(--accent-rose);">*</span></label>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px;" id="regRoleGrid">
+                  ${rolesList.map(r => `
+                    <div 
+                      class="reg-role-card ${formData.role === r.id ? 'selected' : ''}" 
+                      data-role="${r.id}"
+                      style="border: 2px solid ${formData.role === r.id ? 'var(--primary)' : 'var(--border-color)'}; background: ${formData.role === r.id ? 'var(--primary-light)' : 'var(--bg-primary)'}; border-radius: var(--radius-sm); padding: 12px 14px; cursor: pointer; transition: all 0.15s ease;"
+                    >
+                      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                          <span style="font-size: 1.25rem;">${r.icon}</span>
+                          <strong style="font-size: 0.85rem; color: var(--text-primary);">${r.title}</strong>
+                        </div>
+                        ${r.requiresApproval ? `<span class="badge badge-amber" style="font-size: 0.65rem;">APPROVAL REQUIRED</span>` : `<span class="badge badge-green" style="font-size: 0.65rem;">INSTANT ACCESS</span>`}
+                      </div>
+                      <p style="font-size: 0.74rem; color: var(--text-muted); margin: 0; line-height: 1.35;">${r.desc}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Step 3: Review & Submit -->
+            ${currentStep === 3 ? `
+              <div>
+                <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin: 0 0 16px 0;">Step 3: Verification & Confirmation</h2>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
+                  Please verify your registration details below before creating your account in the system database.
+                </p>
+
+                <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 18px 20px; margin-bottom: 20px;">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                    <div>
+                      <div style="font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Username</div>
+                      <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-top: 2px;">${formData.username}</div>
+                    </div>
+                    <div>
+                      <div style="font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Email Address</div>
+                      <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-top: 2px;">${formData.email}</div>
+                    </div>
+                    <div>
+                      <div style="font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Full Name</div>
+                      <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-top: 2px;">${(formData.firstName + ' ' + formData.lastName).trim() || '(None specified)'}</div>
+                    </div>
+                    <div>
+                      <div style="font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Phone Number</div>
+                      <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-top: 2px;">${formData.phoneNumber || '(None specified)'}</div>
+                    </div>
+                    <div style="grid-column: span 2; border-top: 1px solid var(--border-subtle); padding-top: 12px; margin-top: 4px;">
+                      <div style="font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Assigned Role</div>
+                      <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                        <span style="font-size: 1.2rem;">${selectedRoleMeta.icon}</span>
+                        <strong style="font-size: 0.95rem; color: var(--text-primary);">${selectedRoleMeta.title}</strong>
+                        <span class="badge ${selectedRoleMeta.requiresApproval ? 'badge-amber' : 'badge-green'}" style="font-size: 0.72rem;">
+                          ${selectedRoleMeta.requiresApproval ? 'Requires Admin Approval' : 'Instant System Entry'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                ${selectedRoleMeta.requiresApproval ? `
+                  <div role="alert" style="background: var(--accent-amber-light); border: 1px solid #fcd34d; border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 20px; font-size: 0.8125rem; color: var(--accent-amber); display: flex; align-items: flex-start; gap: 10px;">
+                    <span style="font-size: 1.25rem; line-height: 1;">🛡️</span>
+                    <div>
+                      <strong>Administrative Role Notice:</strong> Because you selected an administrative role (<strong>${selectedRoleMeta.title}</strong>), your account will be placed in a <em>Pending Administrator Approval</em> state upon creation. A system administrator must review and activate your account before you can sign in.
+                    </div>
+                  </div>
+                ` : `
+                  <div role="alert" style="background: var(--primary-light); border: 1px solid #6ee7b7; border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 20px; font-size: 0.8125rem; color: var(--primary-dark); display: flex; align-items: flex-start; gap: 10px;">
+                    <span style="font-size: 1.25rem; line-height: 1;">⚡</span>
+                    <div>
+                      <strong>Instant Access:</strong> Your account will be activated immediately upon registration. You will be redirected to sign in with your chosen credentials.
+                    </div>
+                  </div>
+                `}
+              </div>
+            ` : ''}
+
+            <!-- Stepper Actions -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border-subtle);">
+              <div>
+                ${currentStep > 1 ? `
+                  <button type="button" class="btn btn-outline" id="btnRegPrev" ${isSubmitting ? 'disabled' : ''}>
+                    ← Previous Step
+                  </button>
+                ` : `
+                  <a href="#login" class="btn btn-outline" id="btnBackToLogin">
+                    Already have an account? Sign In
+                  </a>
+                `}
+              </div>
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <button 
+                  type="button" 
+                  class="btn btn-primary" 
+                  id="btnRegNext" 
+                  style="min-width: 140px; justify-content: center;"
+                  ${isSubmitting ? 'disabled' : ''}
+                >
+                  ${isSubmitting ? `
+                    <span style="display: inline-flex; align-items: center; gap: 8px;">
+                      <span class="status-dot" style="animation: pulse 0.8s infinite;"></span>
+                      Creating Account...
+                    </span>
+                  ` : (currentStep === totalSteps ? 'Complete Registration' : 'Next Step →')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // ── Event Bindings ──
+      const regUsernameInput = container.querySelector('#regUsername');
+      if (regUsernameInput) {
+        regUsernameInput.addEventListener('input', (e) => {
+          formData.username = e.target.value.trim();
+        });
+      }
+
+      const regEmailInput = container.querySelector('#regEmail');
+      if (regEmailInput) {
+        regEmailInput.addEventListener('input', (e) => {
+          formData.email = e.target.value.trim();
+        });
+      }
+
+      const regPassInput = container.querySelector('#regPassword');
+      if (regPassInput) {
+        regPassInput.addEventListener('input', (e) => {
+          formData.password = e.target.value;
+          const s = calculatePasswordStrength(formData.password);
+          const strengthText = container.querySelector('.password-strength-text');
+          if (strengthText) {
+            strengthText.textContent = s.text;
+            strengthText.style.color = s.color;
+          }
+        });
+      }
+
+      const regConfirmPassInput = container.querySelector('#regConfirmPassword');
+      if (regConfirmPassInput) {
+        regConfirmPassInput.addEventListener('input', (e) => {
+          formData.confirmPassword = e.target.value;
+        });
+      }
+
+      const btnToggleRegPass = container.querySelector('#btnToggleRegPass');
+      if (btnToggleRegPass && regPassInput) {
+        btnToggleRegPass.addEventListener('click', () => {
+          const isPass = regPassInput.type === 'password';
+          regPassInput.type = isPass ? 'text' : 'password';
+          btnToggleRegPass.textContent = isPass ? '🙈' : '👁️';
+        });
+      }
+
+      const regFirstInput = container.querySelector('#regFirstName');
+      if (regFirstInput) {
+        regFirstInput.addEventListener('input', (e) => {
+          formData.firstName = e.target.value;
+        });
+      }
+
+      const regLastInput = container.querySelector('#regLastName');
+      if (regLastInput) {
+        regLastInput.addEventListener('input', (e) => {
+          formData.lastName = e.target.value;
+        });
+      }
+
+      const regPhoneInput = container.querySelector('#regPhone');
+      if (regPhoneInput) {
+        regPhoneInput.addEventListener('input', (e) => {
+          formData.phoneNumber = e.target.value;
+        });
+      }
+
+      // Role cards selection
+      container.querySelectorAll('.reg-role-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const roleId = card.dataset.role;
+          formData.role = roleId;
+          render();
+        });
+      });
+
+      // Navigation & Submission
+      container.querySelector('#btnRegPrev')?.addEventListener('click', () => {
+        if (currentStep > 1) {
+          currentStep--;
+          render();
+        }
+      });
+
+      container.querySelector('#btnBackToLogin')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        authViews.showLoginModal();
+      });
+
+      container.querySelector('#btnRegNext')?.addEventListener('click', async () => {
+        // Validation Step 1
+        if (currentStep === 1) {
+          const userVal = (regUsernameInput?.value || formData.username).trim();
+          const emailVal = (regEmailInput?.value || formData.email).trim().toLowerCase();
+          const passVal = regPassInput?.value || formData.password;
+          const confVal = regConfirmPassInput?.value || formData.confirmPassword;
+
+          formData.username = userVal;
+          formData.email = emailVal;
+          formData.password = passVal;
+          formData.confirmPassword = confVal;
+
+          if (!formData.username || formData.username.length < 3) {
+            render('Username must be at least 3 characters long.', 'critical');
+            return;
+          }
+
+          if (!formData.email || !formData.email.includes('@') || !formData.email.includes('.')) {
+            render('Please enter a valid email address (e.g. name@domain.com).', 'critical');
+            return;
+          }
+
+          if (!formData.password || formData.password.length < 6) {
+            render('Password must be at least 6 characters long.', 'critical');
+            return;
+          }
+
+          if (formData.password !== formData.confirmPassword) {
+            render('Passwords do not match. Please ensure both fields are identical.', 'critical');
+            return;
+          }
+
+          currentStep = 2;
+          render();
+          return;
+        }
+
+        // Validation Step 2
+        if (currentStep === 2) {
+          if (regFirstInput) formData.firstName = regFirstInput.value.trim();
+          if (regLastInput) formData.lastName = regLastInput.value.trim();
+          if (regPhoneInput) formData.phoneNumber = regPhoneInput.value.trim();
+
+          currentStep = 3;
+          render();
+          return;
+        }
+
+        // Final Submission: Step 3
+        if (currentStep === 3) {
+          isSubmitting = true;
+          render();
+
+          const result = await authService.register({
+            username: formData.username,
+            email: formData.email,
+            password: formData.password,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            phoneNumber: formData.phoneNumber,
+            role: formData.role
+          });
+
+          isSubmitting = false;
+
+          if (result.success) {
+            const registeredUsername = formData.username;
+            const requiresApproval = result.requiresApproval;
+            const noticeMsg = requiresApproval
+              ? `Registration successful! Your ${selectedRoleMeta.title} account is pending administrator approval before you can sign in.`
+              : `Registration successful! Please sign in with your password.`;
+
+            // Redirect user to the sign in form with prefilled username/email (and empty password)
+            authViews.showLoginModal(null, {
+              initialUsername: registeredUsername,
+              initialNotice: noticeMsg,
+              alertType: requiresApproval ? 'warning' : 'success'
+            });
+
+            // Also update hash to dashboard or login
+            window.location.hash = '#login';
+          } else {
+            render(result.message || 'Registration failed. Please review your details and try again.', 'critical');
+          }
+        }
+      });
+    };
+
+    render();
   },
 
   // =========================================================================
@@ -1449,6 +1921,7 @@ export const authViews = {
             </div>
             <div style="display: flex; gap: 16px;">
               <button class="btn btn-outline" id="btnLandingDocs" style="color: #fff; border-color: rgba(255,255,255,0.3);">Documentation</button>
+              <button class="btn btn-outline" id="btnLandingRegisterTop" style="color: #fff; border-color: rgba(255,255,255,0.4); display: ${isLoggedIn ? 'none' : 'inline-flex'};">Create Account</button>
               <button class="btn btn-primary" id="btnLandingSignInTop" style="box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39);">${isLoggedIn ? 'Dashboard' : 'Sign In'}</button>
             </div>
           </nav>
@@ -1463,11 +1936,14 @@ export const authViews = {
               Harness the power of real-time agrometeorological telemetry, geospatial crop profiling, and AI-driven suitability engines to maximize your farm's productivity and sustainability.
             </p>
             
-            <div style="display: flex; justify-content: center; gap: 16px;">
+            <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
               <button class="btn btn-primary" id="btnLandingSignInHero" style="padding: 14px 32px; font-size: 1.1rem; border-radius: 9999px;">
                 ${isLoggedIn ? 'Access Command Center' : 'Sign In'}
               </button>
-              <button class="btn btn-outline" id="btnLandingOnboardHero" style="padding: 14px 32px; font-size: 1.1rem; border-radius: 9999px; color: #fff; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.05); display: ${isLoggedIn ? 'none' : 'inline-flex'};">
+              <button class="btn btn-outline" id="btnLandingRegisterHero" style="padding: 14px 32px; font-size: 1.1rem; border-radius: 9999px; color: #fff; border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.05); display: ${isLoggedIn ? 'none' : 'inline-flex'};">
+                Create Account
+              </button>
+              <button class="btn btn-outline" id="btnLandingOnboardHero" style="padding: 14px 28px; font-size: 1.05rem; border-radius: 9999px; color: #fff; border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); display: ${isLoggedIn ? 'none' : 'inline-flex'};">
                 Register New Farm
               </button>
             </div>
@@ -1529,8 +2005,15 @@ export const authViews = {
       }
     };
 
+    const handleRegister = () => {
+      document.body.classList.remove('public-view');
+      window.location.hash = '#register';
+    };
+
     container.querySelector('#btnLandingSignInTop')?.addEventListener('click', handleSignIn);
     container.querySelector('#btnLandingSignInHero')?.addEventListener('click', handleSignIn);
+    container.querySelector('#btnLandingRegisterTop')?.addEventListener('click', handleRegister);
+    container.querySelector('#btnLandingRegisterHero')?.addEventListener('click', handleRegister);
     
     container.querySelector('#btnLandingOnboardHero')?.addEventListener('click', () => {
       authViews.showFarmerOnboardingWizard(() => {

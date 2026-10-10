@@ -149,7 +149,7 @@ export function initRouter() {
 
       // Check authentication requirement: if logged out and accessing private area, redirect to landing
       const isUserLoggedIn = authService.isLoggedIn();
-      const publicExempt = ['logout', 'login', 'forgot-password', 'reset-password', 'help', 'about', '404', '403', '500', 'offline', 'maintenance', ''];
+      const publicExempt = ['logout', 'login', 'register', 'forgot-password', 'reset-password', 'help', 'about', '404', '403', '500', 'offline', 'maintenance', ''];
 
       if (!isUserLoggedIn && !publicExempt.includes(cleanHash) && !cleanHash.startsWith('search')) {
         authViews.renderSignedOutView(contentArea);
@@ -418,6 +418,7 @@ export function initRouter() {
           updateNavbarAuthUI();
           window.location.hash = '#dashboard';
         }),
+        'register': () => authViews.renderRegisterView(contentArea),
         'forgot-password': () => authViews.showForgotPasswordModal(),
         'reset-password': () => authViews.showResetPasswordModal(),
         'profile': () => authViews.showUserProfileModal(),
