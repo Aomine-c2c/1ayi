@@ -263,7 +263,12 @@ export const authService = {
           return { success: false, status: 'INVALID_CREDENTIALS', message: 'Invalid email/username or password.' };
         }
         if (err.status === 403) {
-          return { success: false, status: 'DISABLED', message: err.body?.message || 'Account is disabled. Contact an administrator.' };
+          const isPending = err.body?.pending_approval || (err.body?.message && err.body.message.includes('pending'));
+          return {
+            success: false,
+            status: isPending ? 'PENDING_APPROVAL' : 'DISABLED',
+            message: err.body?.message || (isPending ? 'Account is pending administrator approval before you can sign in.' : 'Account is disabled. Contact an administrator.')
+          };
         }
         if (err.isNetworkError) {
           return { success: false, status: 'NETWORK_ERROR', message: 'Cannot reach the AYIS server. Please check your connection or verify the backend is running.' };
@@ -271,6 +276,53 @@ export const authService = {
         return { success: false, status: 'SERVER_ERROR', message: `Server error (${err.status}): ${err.message}` };
       }
       return { success: false, status: 'UNKNOWN', message: err.message || 'An unexpected error occurred.' };
+    }
+  },
+
+  /**
+   * Register a new user into the platform database
+   */
+  async register({ username, email, password, firstName = '', lastName = '', phoneNumber = '', role = 'farmer' }) {
+    const cleanUsername = (username || '').trim();
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    if (!cleanUsername || !cleanEmail || !password) {
+      return { success: false, message: 'Username, email address, and password are required.' };
+    }
+
+    if (password.length < 6) {
+      return { success: false, message: 'Password must be at least 6 characters long.' };
+    }
+
+    try {
+      const res = await api.request('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({
+          Username: cleanUsername,
+          Email: cleanEmail,
+          Password: password,
+          FirstName: (firstName || '').trim(),
+          LastName: (lastName || '').trim(),
+          PhoneNumber: (phoneNumber || '').trim(),
+          Role: role
+        })
+      });
+
+      return {
+        success: true,
+        requiresApproval: !!res.requires_approval,
+        message: res.message || 'Registration successful!',
+        user: res.user
+      };
+    } catch (err) {
+      if (err.name === 'ApiError') {
+        return {
+          success: false,
+          status: err.status,
+          message: err.body?.message || err.message || 'Failed to complete registration.'
+        };
+      }
+      return { success: false, message: err.message || 'Network error during registration.' };
     }
   },
 

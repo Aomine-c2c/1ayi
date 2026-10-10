@@ -17,12 +17,18 @@ public static class AuthEndpoints
             if (string.IsNullOrWhiteSpace(req.Username) || string.IsNullOrWhiteSpace(req.Password))
                 return Results.BadRequest(new { message = "Username and password are required." });
 
-            var user = await userRepo.GetByUsernameOrEmailAsync(req.Username);
+            var user = await userRepo.GetByUsernameOrEmailAsync(req.Username.Trim());
             if (user == null || !authService.VerifyPassword(req.Password, user.PasswordHash))
                 return Results.Json(new { message = "Invalid credentials." }, statusCode: 401);
 
             if (!user.IsActive)
-                return Results.Json(new { message = "Account is disabled. Contact an administrator." }, statusCode: 403);
+            {
+                var requiresAdminApproval = user.Role is "admin" or "system_admin" or "super_admin";
+                var errorMsg = requiresAdminApproval
+                    ? "Account is pending administrator approval before you can sign in."
+                    : "Account is disabled. Contact an administrator.";
+                return Results.Json(new { message = errorMsg, pending_approval = requiresAdminApproval }, statusCode: 403);
+            }
 
             var token = authService.GenerateJwtToken(user);
             return Results.Ok(new
@@ -42,6 +48,79 @@ public static class AuthEndpoints
                 }
             });
         }).WithName("Login").WithTags("Auth").AllowAnonymous();
+
+        // POST /api/v1/auth/register — Public Registration
+        app.MapPost("/api/v1/auth/register", async (RegisterRequest req, UserRepository userRepo, AuthService authService) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.Username) || string.IsNullOrWhiteSpace(req.Email))
+                return Results.BadRequest(new { message = "Username and email address are required." });
+
+            if (string.IsNullOrWhiteSpace(req.Password) || req.Password.Length < 6)
+                return Results.BadRequest(new { message = "Password must be at least 6 characters long." });
+
+            var cleanUsername = req.Username.Trim();
+            var cleanEmail = req.Email.Trim().ToLowerInvariant();
+
+            // Check if username or email is already registered
+            var existingUser = await userRepo.GetByUsernameOrEmailAsync(cleanUsername);
+            if (existingUser != null)
+                return Results.Conflict(new { message = "Username is already taken. Please choose another username." });
+
+            var existingEmail = await userRepo.GetByUsernameOrEmailAsync(cleanEmail);
+            if (existingEmail != null)
+                return Results.Conflict(new { message = "Email address is already registered. Please sign in or use another email." });
+
+            var rawRole = (req.Role ?? "farmer").Trim().ToLowerInvariant();
+            var allowedRoles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "farmer", "agronomist", "extension_officer", "weather_analyst",
+                "farm_manager", "field_officer", "system_admin", "super_admin", "admin"
+            };
+
+            var normalizedRole = allowedRoles.Contains(rawRole) ? rawRole : "farmer";
+            if (normalizedRole == "admin") normalizedRole = "system_admin";
+
+            // Roles requiring admin approval before entering system
+            var requiresApproval = normalizedRole is "system_admin" or "super_admin";
+            var isActive = !requiresApproval;
+
+            var newUser = new User
+            {
+                Id           = $"u-{Guid.NewGuid().ToString()[..8]}",
+                Username     = cleanUsername,
+                Email        = cleanEmail,
+                PasswordHash = authService.HashPassword(req.Password),
+                FirstName    = req.FirstName?.Trim() ?? string.Empty,
+                LastName     = req.LastName?.Trim() ?? string.Empty,
+                PhoneNumber  = req.PhoneNumber?.Trim(),
+                Role         = normalizedRole,
+                IsActive     = isActive,
+                IsStaff      = normalizedRole is "system_admin" or "super_admin",
+                CreatedAt    = DateTime.UtcNow
+            };
+
+            var created = await userRepo.CreateAsync(newUser);
+            if (!created)
+                return Results.Problem("Failed to create user account. Please try again.");
+
+            return Results.Created($"/api/v1/users/{newUser.Id}", new
+            {
+                message = requiresApproval
+                    ? "Registration successful! Your administrative account requires administrator approval before you can sign in."
+                    : "Registration successful! You can now sign in with your credentials.",
+                requires_approval = requiresApproval,
+                user = new
+                {
+                    id         = newUser.Id,
+                    username   = newUser.Username,
+                    email      = newUser.Email,
+                    role       = newUser.Role,
+                    first_name = newUser.FirstName,
+                    last_name  = newUser.LastName,
+                    is_active  = newUser.IsActive
+                }
+            });
+        }).WithName("Register").WithTags("Auth").AllowAnonymous();
 
         // GET /api/v1/auth/me — Current authenticated user profile
         app.MapGet("/api/v1/auth/me", async (ClaimsPrincipal principal, UserRepository userRepo) =>
