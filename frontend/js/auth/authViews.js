@@ -163,8 +163,7 @@ export const authViews = {
       });
 
       overlay.querySelector('#btnLaunchRegisterFromLogin')?.addEventListener('click', () => {
-        overlay.classList.remove('active');
-        window.location.hash = '#register';
+        authViews.showRegisterModal();
       });
 
       // Common login execution helper
@@ -211,9 +210,32 @@ export const authViews = {
   },
 
   // =========================================================================
-  // 1B. FULL MULTI-STEP USER REGISTRATION VIEW (#register)
+  // 1B. IN-SYSTEM REGISTRATION MODAL & WORKFLOW
+  // Allows the user to register an account while viewing any part of the system
   // =========================================================================
-  renderRegisterView(container) {
+  showRegisterModal(onSuccess) {
+    let overlay = document.getElementById('globalModalOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'globalModalOverlay';
+      overlay.className = 'modal-overlay';
+      document.body.appendChild(overlay);
+    }
+    overlay.classList.add('active');
+    overlay.innerHTML = '<div id="registerModalContent" style="width: 100%; max-width: 820px; max-height: 90vh; overflow-y: auto; border-radius: var(--radius-md);"></div>';
+    const container = overlay.querySelector('#registerModalContent');
+    this.renderRegisterView(container, {
+      isModal: true,
+      onClose: () => overlay.classList.remove('active'),
+      onSuccess: onSuccess
+    });
+  },
+
+  // =========================================================================
+  // 1C. MULTI-STEP USER REGISTRATION WIZARD (Both Standalone View & Modal)
+  // =========================================================================
+  renderRegisterView(container, options = {}) {
+    const { isModal = false, onClose = null, onSuccess = null } = options;
     let currentStep = 1;
     const totalSteps = 4;
     let isSubmitting = false;
@@ -288,43 +310,46 @@ export const authViews = {
       const strength = calculatePasswordStrength(formData.password);
 
       container.innerHTML = `
-        <div class="register-view-container" style="max-width: 820px; margin: 32px auto; padding: 0 16px;">
+        <div class="register-view-container" style="${isModal ? 'max-width: 100%; margin: 0; padding: 0;' : 'max-width: 820px; margin: 32px auto; padding: 0 16px;'}">
           <!-- Header Banner -->
-          <div style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); border-radius: var(--radius-md) var(--radius-md) 0 0; padding: 28px 32px; color: #fff; position: relative; overflow: hidden; box-shadow: var(--shadow-sm);">
+          <div style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); border-radius: var(--radius-md) var(--radius-md) 0 0; padding: 24px 30px; color: #fff; position: relative; overflow: hidden; box-shadow: var(--shadow-sm);">
             <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: flex-start;">
               <div>
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                  <span style="font-size: 1.5rem;">🌱</span>
+                  <span style="font-size: 1.4rem;">🌱</span>
                   <span class="badge badge-green" style="background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.3); font-size: 0.72rem; letter-spacing: 0.5px;">AYIS USER REGISTRATION</span>
                 </div>
-                <h1 style="font-size: 1.6rem; font-weight: 800; color: #fff; margin: 0 0 6px 0; letter-spacing: -0.5px;">Create Your Account</h1>
-                <p style="font-size: 0.875rem; color: #a7f3d0; margin: 0; max-width: 520px;">
+                <h1 style="font-size: 1.5rem; font-weight: 800; color: #fff; margin: 0 0 4px 0; letter-spacing: -0.5px;">Create Your Account</h1>
+                <p style="font-size: 0.85rem; color: #a7f3d0; margin: 0; max-width: 520px;">
                   Join the Zimbabwe Agricultural Yield Intelligence Platform to access real-time agromet telemetry and tailored farm intelligence.
                 </p>
               </div>
-              <div style="text-align: right;">
+              <div style="display: flex; align-items: center; gap: 14px;">
                 <span style="font-size: 0.8rem; font-weight: 700; color: #d1fae5; text-transform: uppercase;">Step ${currentStep} of ${totalSteps}</span>
+                ${isModal ? `
+                  <button type="button" id="regModalCloseBtn" style="background: rgba(255,255,255,0.15); border: none; color: #fff; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; line-height: 1;" aria-label="Close dialog">&times;</button>
+                ` : ''}
               </div>
             </div>
           </div>
 
           <!-- Wizard Progress Stepper -->
-          <div style="background: var(--bg-secondary); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 14px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; gap: 8px; overflow-x: auto;">
-            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 130px;">
-              <div style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; background: ${currentStep >= 1 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 1 ? '#fff' : 'var(--text-muted)'};">1</div>
-              <div style="font-size: 0.75rem; font-weight: ${currentStep === 1 ? '800' : '600'}; color: ${currentStep >= 1 ? 'var(--text-primary)' : 'var(--text-muted)'}; white-space: nowrap;">Credentials</div>
+          <div style="background: var(--bg-secondary); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 14px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+              <div style="width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; background: ${currentStep >= 1 ? 'var(--primary)' : '#e4e4e7'}; color: ${currentStep >= 1 ? '#fff' : 'var(--text-muted)'}; flex-shrink: 0;">1</div>
+              <div style="font-size: 0.75rem; font-weight: ${currentStep === 1 ? '700' : '500'}; color: ${currentStep >= 1 ? 'var(--text-primary)' : 'var(--text-muted)'}; white-space: nowrap;">Credentials</div>
             </div>
-            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 130px;">
-              <div style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; background: ${currentStep >= 2 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 2 ? '#fff' : 'var(--text-muted)'};">2</div>
-              <div style="font-size: 0.75rem; font-weight: ${currentStep === 2 ? '800' : '600'}; color: ${currentStep >= 2 ? 'var(--text-primary)' : 'var(--text-muted)'}; white-space: nowrap;">Role & Profile</div>
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+              <div style="width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; background: ${currentStep >= 2 ? 'var(--primary)' : '#e4e4e7'}; color: ${currentStep >= 2 ? '#fff' : 'var(--text-muted)'}; flex-shrink: 0;">2</div>
+              <div style="font-size: 0.75rem; font-weight: ${currentStep === 2 ? '700' : '500'}; color: ${currentStep >= 2 ? 'var(--text-primary)' : 'var(--text-muted)'}; white-space: nowrap;">Role & Profile</div>
             </div>
-            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 150px;">
-              <div style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; background: ${currentStep >= 3 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 3 ? '#fff' : 'var(--text-muted)'};">3</div>
-              <div style="font-size: 0.75rem; font-weight: ${currentStep === 3 ? '800' : '600'}; color: ${currentStep >= 3 ? 'var(--text-primary)' : 'var(--text-muted)'}; white-space: nowrap;">Role Details</div>
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+              <div style="width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; background: ${currentStep >= 3 ? 'var(--primary)' : '#e4e4e7'}; color: ${currentStep >= 3 ? '#fff' : 'var(--text-muted)'}; flex-shrink: 0;">3</div>
+              <div style="font-size: 0.75rem; font-weight: ${currentStep === 3 ? '700' : '500'}; color: ${currentStep >= 3 ? 'var(--text-primary)' : 'var(--text-muted)'}; white-space: nowrap;">Role Details</div>
             </div>
-            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 130px;">
-              <div style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; background: ${currentStep >= 4 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 4 ? '#fff' : 'var(--text-muted)'};">4</div>
-              <div style="font-size: 0.75rem; font-weight: ${currentStep === 4 ? '800' : '600'}; color: ${currentStep >= 4 ? 'var(--text-primary)' : 'var(--text-muted)'}; white-space: nowrap;">Review & Finish</div>
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+              <div style="width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; background: ${currentStep >= 4 ? 'var(--primary)' : '#e4e4e7'}; color: ${currentStep >= 4 ? '#fff' : 'var(--text-muted)'}; flex-shrink: 0;">4</div>
+              <div style="font-size: 0.75rem; font-weight: ${currentStep === 4 ? '700' : '500'}; color: ${currentStep >= 4 ? 'var(--text-primary)' : 'var(--text-muted)'}; white-space: nowrap;">Review & Finish</div>
             </div>
           </div>
 
@@ -1001,6 +1026,17 @@ export const authViews = {
         });
       }
 
+      // Modal close button
+      if (isModal) {
+        container.querySelector('#regModalCloseBtn')?.addEventListener('click', () => {
+          if (onClose) onClose();
+          else {
+            const overlay = document.getElementById('globalModalOverlay');
+            if (overlay) overlay.classList.remove('active');
+          }
+        });
+      }
+
       // Navigation & Submission
       container.querySelector('#btnRegPrev')?.addEventListener('click', () => {
         if (currentStep > 1) {
@@ -1011,7 +1047,7 @@ export const authViews = {
 
       container.querySelector('#btnBackToLogin')?.addEventListener('click', (e) => {
         e.preventDefault();
-        authViews.showLoginModal();
+        authViews.showLoginModal(onSuccess);
       });
 
       container.querySelector('#btnRegNext')?.addEventListener('click', async () => {
@@ -1184,19 +1220,24 @@ export const authViews = {
                   ? `Registration successful! Farm "${farmDetails.name}" registered and linked. Please sign in with your password.`
                   : `Registration successful! Please sign in with your password.`);
 
-            // Store options so the #login route opens the modal with prefilled data cleanly
-            window.__ayis_login_notice = {
+            const loginOptions = {
               initialUsername: registeredUsername,
               initialNotice: noticeMsg,
               alertType: requiresApproval ? 'warning' : 'success'
             };
 
-            // Transition cleanly to login route
-            if (window.location.hash === '#login') {
-              authViews.showLoginModal(null, window.__ayis_login_notice);
-              window.__ayis_login_notice = null;
+            if (isModal) {
+              // Seamless in-modal transition directly to Sign In dialog
+              authViews.showLoginModal(onSuccess, loginOptions);
             } else {
-              window.location.hash = '#login';
+              // Store options and transition to #login route
+              window.__ayis_login_notice = loginOptions;
+              if (window.location.hash === '#login') {
+                authViews.showLoginModal(null, window.__ayis_login_notice);
+                window.__ayis_login_notice = null;
+              } else {
+                window.location.hash = '#login';
+              }
             }
           } else {
             render(result.message || 'Registration failed. Please review your details and try again.', 'critical');

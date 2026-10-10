@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AYIS — Agricultural Yield Production Monitoring System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/vendor/leaflet.css">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌱</text></svg>">
@@ -72,6 +75,7 @@
               <option value="farm_manager">📋 Farm Manager</option>
               <option value="farmer">🚜 Farmer</option>
             </select>
+          </div>
         </div>
 
         <div style="display: flex; align-items: center; gap: 10px;">
@@ -98,11 +102,15 @@
           </button>
 
           <!-- User Profile & Action Controls -->
-          <button class="btn btn-primary" id="btnTopSignIn" title="Sign in with another role or account" style="padding: 6px 14px; font-size: 0.8rem; font-weight: 700; display: none;">
+          <button class="btn btn-outline" id="btnTopRegister" title="Create an account while viewing the system" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 600; display: inline-flex;">
+            ✨ Register
+          </button>
+
+          <button class="btn btn-primary" id="btnTopSignIn" title="Sign in with your registered account" style="padding: 6px 14px; font-size: 0.8rem; font-weight: 600; display: inline-flex;">
             🔑 Sign In
           </button>
 
-          <button class="btn btn-outline" id="btnTopOnboard" style="padding: 6px 12px; font-size: 0.8rem;" title="Start farmer registration">
+          <button class="btn btn-outline" id="btnTopOnboard" style="padding: 6px 12px; font-size: 0.8rem;" title="Start farmer registration wizard">
             🌱 Onboard Farmer
           </button>
 

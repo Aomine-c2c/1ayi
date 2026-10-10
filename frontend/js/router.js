@@ -39,7 +39,26 @@ export function initRouter() {
       roleSelect.title = isLoggedIn ? 'Active role is bound to the authenticated account' : 'Select preview role';
     }
 
-    if (btnSignIn) btnSignIn.style.display = isLoggedIn ? 'none' : 'inline-flex';
+    const btnRegister = document.getElementById('btnTopRegister');
+    if (btnRegister) {
+      btnRegister.style.display = isLoggedIn ? 'none' : 'inline-flex';
+      btnRegister.onclick = () => {
+        authViews.showRegisterModal(() => {
+          updateNavbarAuthUI();
+          window.location.hash = '#dashboard';
+        });
+      };
+    }
+
+    if (btnSignIn) {
+      btnSignIn.style.display = isLoggedIn ? 'none' : 'inline-flex';
+      btnSignIn.onclick = () => {
+        authViews.showLoginModal(() => {
+          updateNavbarAuthUI();
+          window.location.hash = '#dashboard';
+        });
+      };
+    }
     if (btnSignOut) btnSignOut.style.display = isLoggedIn ? 'inline-flex' : 'none';
 
     if (topAvatar) topAvatar.textContent = currentUser?.avatar || '🌱';
@@ -165,11 +184,28 @@ export function initRouter() {
 
       // Route public exempt paths immediately before role-specific overrides
       const publicRouteMap = {
-        'register': () => authViews.renderRegisterView(contentArea),
-        'login': () => {
+        'register': async () => {
+          // Render the active dashboard in the background so the user is viewing the system
+          if (roleViews[currentRole]) {
+            await roleViews[currentRole](contentArea);
+          } else if (views.dashboard) {
+            await views.dashboard(contentArea);
+          }
+          authViews.showRegisterModal(() => {
+            updateNavbarAuthUI();
+            window.location.hash = '#dashboard';
+          });
+        },
+        'login': async () => {
+          // Render the active dashboard in the background so the user is viewing the system
+          if (roleViews[currentRole]) {
+            await roleViews[currentRole](contentArea);
+          } else if (views.dashboard) {
+            await views.dashboard(contentArea);
+          }
           const redirectOptions = window.__ayis_login_notice || {};
           window.__ayis_login_notice = null;
-          return authViews.showLoginModal(() => {
+          authViews.showLoginModal(() => {
             updateNavbarAuthUI();
             window.location.hash = '#dashboard';
           }, redirectOptions);
