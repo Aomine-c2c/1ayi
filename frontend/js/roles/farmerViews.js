@@ -177,6 +177,81 @@ export const farmerViews = {
         </div>
       </div>
 
+      <!-- SMART CROP SUITABILITY, RECOMMENDATION & YIELD INTELLIGENCE SIMULATOR -->
+      <div class="panel" style="padding: 24px; margin-bottom: 24px; border: 1px solid var(--border-color); background: #ffffff; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; margin-bottom: 20px;">
+          <div>
+            <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <span class="badge badge-green" style="font-weight: 800;">AGRO-INTELLIGENCE SIMULATOR</span>
+              <span style="font-size: 0.8rem; font-weight: 700; color: var(--primary-dark);">Live Suitability & Yield Engine</span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 900; color: var(--text-primary); margin: 0;">
+              🌱 Crop Suitability & On-Target Yield Intelligence
+            </h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+              Automatically evaluates agro-ecological zone (${primaryFarm?.region || 'Mashonaland Central'}) & seasonal climate compatibility. Test any crop (e.g. Dry Beans, Maize, Wheat) to detect suitability or critical climatic limiting factors.
+            </p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span class="badge badge-blue" id="simCurrentSeasonBadge">Detected Season: Inferred</span>
+            <span class="badge badge-purple">${primaryFarm?.soilType || 'Clay Loam'}</span>
+          </div>
+        </div>
+
+        <!-- Simulator Interactive Controls -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; background: var(--bg-primary); padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 20px;">
+          <div>
+            <label style="display: block; font-size: 0.775rem; font-weight: 800; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">
+              Candidate Crop
+            </label>
+            <select id="simCropSelect" class="form-control" style="width: 100%; font-weight: 700; padding: 8px 12px; border-radius: var(--radius-xs);">
+              <option value="Dry Beans" ${primaryCropName.toLowerCase().includes('bean') ? 'selected' : ''}>Dry Beans (Phaseolus vulgaris)</option>
+              <option value="White Maize (SC719)" ${primaryCropName.toLowerCase().includes('maize') || !primaryCropName ? 'selected' : ''}>White Maize (SC719 Hybrid)</option>
+              <option value="Winter Wheat (SC Nduna)" ${primaryCropName.toLowerCase().includes('wheat') ? 'selected' : ''}>Winter Wheat (SC Nduna)</option>
+              <option value="Sorghum (SVI-2)" ${primaryCropName.toLowerCase().includes('sorghum') ? 'selected' : ''}>Sorghum (SVI-2 Red)</option>
+              <option value="Irish Potato (Bp1)" ${primaryCropName.toLowerCase().includes('potato') ? 'selected' : ''}>Irish Potato (Bp1 Variety)</option>
+              <option value="Soya Beans (SC Santa)" ${primaryCropName.toLowerCase().includes('soya') ? 'selected' : ''}>Soya Beans (SC Santa)</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.775rem; font-weight: 800; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">
+              Target Farming Season
+            </label>
+            <select id="simSeasonSelect" class="form-control" style="width: 100%; font-weight: 700; padding: 8px 12px; border-radius: var(--radius-xs);">
+              <option value="Summer Main Rains (Nov - Mar)" selected>Summer Main Rains (Nov - Mar)</option>
+              <option value="Autumn Transitional (Feb - Apr)">Autumn Transitional (Feb - Apr)</option>
+              <option value="Winter Irrigated Season (May - Aug)">Winter Irrigated Season (May - Aug)</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.775rem; font-weight: 800; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">
+              Agro-Ecological Region
+            </label>
+            <select id="simRegionSelect" class="form-control" style="width: 100%; font-weight: 700; padding: 8px 12px; border-radius: var(--radius-xs);">
+              <option value="Mashonaland Central (Region II)" ${(!primaryFarm || primaryFarm.region?.includes('Mashonaland Central')) ? 'selected' : ''}>Mashonaland Central (High Rainfall Reg II)</option>
+              <option value="Manicaland Highlands (Region I)" ${primaryFarm?.region?.includes('Manicaland') ? 'selected' : ''}>Manicaland Highlands (High Rainfall Reg I)</option>
+              <option value="Midlands Highveld (Region III)" ${primaryFarm?.region?.includes('Midlands') ? 'selected' : ''}>Midlands Highveld (Mod Rainfall Reg III)</option>
+              <option value="Masvingo Semi-Arid (Region IV)" ${primaryFarm?.region?.includes('Masvingo') ? 'selected' : ''}>Masvingo Semi-Arid (Low Rainfall Reg IV)</option>
+              <option value="Matabeleland South (Region V)" ${primaryFarm?.region?.includes('Matabeleland') ? 'selected' : ''}>Matabeleland South (Arid Reg V)</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.775rem; font-weight: 800; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">
+              Target Land Area (Hectares)
+            </label>
+            <input id="simAreaInput" type="number" step="0.5" min="0.5" max="500" value="${totalArea.toFixed(1)}" class="form-control" style="width: 100%; font-weight: 700; padding: 8px 12px; border-radius: var(--radius-xs);" />
+          </div>
+        </div>
+
+        <!-- Live Intelligence Output Result Container -->
+        <div id="simResultContainer" style="transition: all 0.25s ease;">
+          <!-- Dynamically populated by renderSimulationResult() -->
+        </div>
+      </div>
+
       <!-- Quick KPI Stats -->
       <div class="metrics-grid-8" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
         <div class="metric-box">
@@ -191,13 +266,13 @@ export const farmerViews = {
         </div>
         <div class="metric-box">
           <span class="metric-box-label">Expected Harvest</span>
-          <span class="metric-box-val" style="color: var(--primary-dark);">${activeCycle?.targetYield || '5.6 t/ha'}</span>
-          <span class="metric-box-sub" style="color: var(--primary-dark);">+24% vs regional benchmark</span>
+          <span class="metric-box-val" id="dashExpectedHarvestVal" style="color: var(--primary-dark);">${activeCycle?.targetYield || '5.6 t/ha'}</span>
+          <span class="metric-box-sub" id="dashExpectedHarvestSub" style="color: var(--primary-dark);">+24% vs regional benchmark</span>
         </div>
         <div class="metric-box">
           <span class="metric-box-label">Weather Suitability</span>
-          <span class="metric-box-val" style="color: var(--primary-dark);">91.5%</span>
-          <span class="metric-box-sub" style="color: var(--primary-dark);">CLASS S1: Highly Suitable</span>
+          <span class="metric-box-val" id="dashSuitabilityScoreVal" style="color: var(--primary-dark);">91.5%</span>
+          <span class="metric-box-sub" id="dashSuitabilityClassSub" style="color: var(--primary-dark);">CLASS S1: Highly Suitable</span>
         </div>
       </div>
 
@@ -252,6 +327,148 @@ export const farmerViews = {
         </div>
       </div>
     `;
+
+    // Interactive Simulator Runner Function
+    const simResultContainer = container.querySelector('#simResultContainer');
+    const cropSelect = container.querySelector('#simCropSelect');
+    const seasonSelect = container.querySelector('#simSeasonSelect');
+    const regionSelect = container.querySelector('#simRegionSelect');
+    const areaInput = container.querySelector('#simAreaInput');
+    const seasonBadge = container.querySelector('#simCurrentSeasonBadge');
+    const dashSuitScore = container.querySelector('#dashSuitabilityScoreVal');
+    const dashSuitSub = container.querySelector('#dashSuitabilityClassSub');
+    const dashHarvestVal = container.querySelector('#dashExpectedHarvestVal');
+    const dashHarvestSub = container.querySelector('#dashExpectedHarvestSub');
+
+    const runSimulation = () => {
+      if (!simResultContainer) return;
+      const crop = cropSelect ? cropSelect.value : 'Dry Beans';
+      const season = seasonSelect ? seasonSelect.value : 'Summer Main Rains';
+      const region = regionSelect ? regionSelect.value : 'Mashonaland Central';
+      const area = areaInput ? parseFloat(areaInput.value) || 5.0 : 5.0;
+      const soil = primaryFarm?.soilType || 'Clay Loam';
+
+      const evalResult = recommendationService.evaluateCropSuitabilityAndYield({
+        cropName: crop,
+        region,
+        season,
+        areaHa: area,
+        soilType: soil
+      });
+
+      if (seasonBadge) {
+        seasonBadge.textContent = `Current Season: ${evalResult.inferredSeason}`;
+      }
+
+      // Update KPI widgets if matching selected crop
+      if (dashSuitScore) dashSuitScore.textContent = `${evalResult.score}%`;
+      if (dashSuitSub) {
+        dashSuitSub.textContent = evalResult.suitabilityClass;
+        dashSuitSub.style.color = evalResult.isSuitable ? 'var(--primary-dark)' : 'var(--accent-rose, #dc2626)';
+      }
+      if (dashHarvestVal) dashHarvestVal.textContent = `${(evalResult.projectedKgHa / 1000).toFixed(2)} t/ha`;
+      if (dashHarvestSub) {
+        dashHarvestSub.textContent = `${evalResult.variancePct >= 0 ? '+' : ''}${evalResult.variancePct}% vs benchmark`;
+        dashHarvestSub.style.color = evalResult.variancePct >= 0 ? 'var(--primary-dark)' : 'var(--accent-rose, #dc2626)';
+      }
+
+      // Render Rich Result Card
+      simResultContainer.innerHTML = `
+        <div style="background: ${evalResult.isSuitable ? 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%)' : 'linear-gradient(135deg, #fef2f2 0%, #ffffff 100%)'}; border: 1.5px solid ${evalResult.isSuitable ? '#86efac' : '#fca5a5'}; border-radius: var(--radius-sm); padding: 20px;">
+          
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; margin-bottom: 16px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span class="badge ${evalResult.isSuitable ? 'badge-green' : 'badge-rose'}" style="font-weight: 800; font-size: 0.8rem;">
+                  ${evalResult.suitabilityClass}
+                </span>
+                <span style="font-size: 0.85rem; font-weight: 800; color: ${evalResult.isSuitable ? 'var(--primary-dark)' : 'var(--accent-rose, #dc2626)'};">
+                  ${evalResult.suitabilityRating} (${evalResult.score}/100 Agro-Index)
+                </span>
+              </div>
+              <h3 style="font-size: 1.25rem; font-weight: 900; color: var(--text-primary); margin: 0;">
+                ${evalResult.crop} in ${region} (${season})
+              </h3>
+            </div>
+
+            <!-- On-Target Yield Intelligence Badges -->
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-xs); padding: 8px 14px; text-align: right;">
+                <div style="font-size: 0.725rem; color: var(--text-muted); font-weight: 700;">ON-TARGET YIELD</div>
+                <div style="font-size: 1.25rem; font-weight: 900; color: ${evalResult.isSuitable ? 'var(--primary-dark)' : 'var(--accent-rose, #dc2626)'};">
+                  ${evalResult.projectedKgHa.toLocaleString()} kg/ha
+                </div>
+                <div style="font-size: 0.7rem; font-weight: 700; color: ${evalResult.variancePct >= 0 ? 'var(--primary-dark)' : 'var(--accent-rose, #dc2626)'};">
+                  ${evalResult.variancePct >= 0 ? '+' : ''}${evalResult.variancePct}% vs benchmark (${evalResult.benchmarkKgHa} kg/ha)
+                </div>
+              </div>
+
+              <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-xs); padding: 8px 14px; text-align: right;">
+                <div style="font-size: 0.725rem; color: var(--text-muted); font-weight: 700;">TOTAL HARVEST FORECAST</div>
+                <div style="font-size: 1.25rem; font-weight: 900; color: var(--text-primary);">
+                  ${evalResult.totalProjectedOutputMT} MT
+                </div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">
+                  Across ${evalResult.areaHa} ha · ${evalResult.confidenceScore}% Confidence
+                </div>
+              </div>
+            </div>
+          </div>
+
+          ${!evalResult.isSuitable ? `
+            <!-- UNSUITABILITY ALERT & LIMITING FACTORS -->
+            <div style="background: #fff1f2; border-left: 5px solid #ef4444; padding: 14px 16px; border-radius: 0 var(--radius-xs) var(--radius-xs) 0; margin-bottom: 14px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span style="font-size: 1.1rem;">⚠️</span>
+                <strong style="color: #991b1b; font-size: 0.925rem;">CRITICAL UNSUITABILITY ALERT & CLIMATIC LIMITING FACTORS:</strong>
+              </div>
+              <ul style="margin: 0; padding-left: 20px; color: #7f1d1d; font-size: 0.85rem; line-height: 1.5;">
+                ${evalResult.limitingReasons.map(r => `<li style="margin-bottom: 4px;"><strong>${r}</strong></li>`).join('')}
+              </ul>
+            </div>
+          ` : `
+            <!-- OPPORTUNITIES -->
+            <div style="background: #f0fdf4; border-left: 5px solid #22c55e; padding: 12px 16px; border-radius: 0 var(--radius-xs) var(--radius-xs) 0; margin-bottom: 14px;">
+              <strong style="color: #166534; font-size: 0.875rem;">Favorable Agro-Climatic Match:</strong>
+              <div style="color: #14532d; font-size: 0.825rem; margin-top: 4px;">
+                ${evalResult.opportunities.length > 0 ? evalResult.opportunities.join(' ') : 'Thermal units and precipitation match this cultivar requirements perfectly.'}
+              </div>
+            </div>
+          `}
+
+          <!-- ACTIONABLE DIRECTIVE / RECOMMENDATION -->
+          <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-xs); padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
+                💡 Agronomic Recommendation & Directive
+              </span>
+              <p style="margin: 4px 0 0; font-size: 0.875rem; color: var(--text-primary); font-weight: 600;">
+                ${evalResult.recommendationAction}
+              </p>
+            </div>
+            ${!evalResult.isSuitable && crop.toLowerCase().includes('bean') ? `
+              <button class="btn btn-outline" style="font-size: 0.8rem; border-color: #ef4444; color: #dc2626;" onclick="document.querySelector('#simCropSelect').value='White Maize (SC719)'; document.querySelector('#simCropSelect').dispatchEvent(new Event('change'));">
+                Pivot to Maize (Recommended) →
+              </button>
+            ` : `
+              <button class="btn btn-primary" style="font-size: 0.8rem;" onclick="location.hash='#recommendations'">
+                View Full Field Directives →
+              </button>
+            `}
+          </div>
+
+        </div>
+      `;
+    };
+
+    // Attach real-time listeners for live interactive simulations
+    cropSelect?.addEventListener('change', runSimulation);
+    seasonSelect?.addEventListener('change', runSimulation);
+    regionSelect?.addEventListener('change', runSimulation);
+    areaInput?.addEventListener('input', runSimulation);
+
+    // Initial evaluation
+    runSimulation();
 
     container.querySelector('#btnFarmerNewCrop')?.addEventListener('click', () => {
       farmerViews.showAddCropCycleModal(() => farmerViews.dashboard(container));

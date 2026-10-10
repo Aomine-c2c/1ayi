@@ -1148,7 +1148,7 @@ export const recommendationService = {
     return {
       fieldId,
       cropId,
-      cropName: 'Highland Hybrid Maize (H614D)',
+      cropName: 'Highland Hybrid Maize (SC719 / H614D)',
       scientificName: 'Zea mays',
       overallScore: 91.5,
       suitabilityRating: 'Excellent',
@@ -1177,7 +1177,7 @@ export const recommendationService = {
       seasonalSuitability: {
         score: 90.0,
         rating: 'Excellent',
-        seasonName: '2026 Long Rains',
+        seasonName: 'Main Summer Rains',
         statusText: 'Climatic forecast aligns with the 105-120 day maturation window.'
       },
       edaphicSuitability: {
@@ -1193,6 +1193,155 @@ export const recommendationService = {
         { risk: 'Late Season Dry Spell', level: 'MODERATE', detail: 'Slight risk of premature rain cessation during grain dough filling.' }
       ],
       limitingFactors: 'Slight seasonal soil drainage lag on southern parcel boundary; fully manageable via standard ridge tillage.'
+    };
+  },
+
+  /**
+   * Evaluates crop suitability, projected yield, and precise limiting / unsuitability factors
+   * based on the farmer's area (agro-ecological region), season, and chosen crop.
+   */
+  evaluateCropSuitabilityAndYield({ cropName = 'Dry Beans', region = 'Mashonaland Central', season = 'Winter Irrigated', areaHa = 5.0, soilType = 'Clay Loam' }) {
+    const cleanCrop = (cropName || 'Dry Beans').toLowerCase();
+    const cleanSeason = (season || 'Winter Irrigated').toLowerCase();
+    const cleanRegion = (region || '').toLowerCase();
+    const size = Math.max(0.1, parseFloat(areaHa) || 5.0);
+
+    // Baseline benchmarks (kg/ha)
+    let benchmarkKgHa = 1800; // Beans baseline
+    if (cleanCrop.includes('maize')) benchmarkKgHa = 5000;
+    else if (cleanCrop.includes('wheat')) benchmarkKgHa = 4200;
+    else if (cleanCrop.includes('sorghum')) benchmarkKgHa = 3200;
+    else if (cleanCrop.includes('potato')) benchmarkKgHa = 22000;
+    else if (cleanCrop.includes('soya') || cleanCrop.includes('soybean')) benchmarkKgHa = 2600;
+
+    let score = 85;
+    let suitabilityClass = 'S1 HIGHLY SUITABLE';
+    let suitabilityRating = 'Suitable';
+    let isSuitable = true;
+    let limitingReasons = [];
+    let opportunities = [];
+    let recommendationAction = '';
+    let projectedKgHa = benchmarkKgHa;
+
+    // Detect Current / Inferred Season if needed
+    const currentMonth = new Date().getMonth() + 1; // 1-12
+    const inferredSeason = (currentMonth >= 11 || currentMonth <= 3) 
+      ? 'Summer Main Rains' 
+      : ((currentMonth >= 5 && currentMonth <= 8) ? 'Winter Irrigated Season' : 'Autumn Transitional');
+
+    // ── SPECIFIC BEANS UNSUITABILITY & SEASONAL RULES ──
+    if (cleanCrop.includes('bean')) {
+      benchmarkKgHa = 1800;
+      // Beans in Main Summer Rains with heavy rain (> 800mm or Natural Region I/II heavy rains)
+      if (cleanSeason.includes('summer') || cleanSeason.includes('main rain')) {
+        if (cleanRegion.includes('manicaland') || cleanRegion.includes('natural region i') || cleanRegion.includes('mashonaland central')) {
+          score = 38;
+          isSuitable = false;
+          suitabilityClass = 'N UNSUITABLE';
+          suitabilityRating = 'Severely Limiting';
+          limitingReasons.push('Excessive summer precipitation (>800mm) causes rapid fungal flower abortion and Sclerotinia white rot.');
+          limitingReasons.push('Continuous damp soil on ' + soilType + ' induces root rot and damping-off for bean taproots.');
+          limitingReasons.push('High atmospheric humidity (>82%) elevates anthracnose epidemics, slashing pod filling by >50%.');
+          recommendationAction = 'Do NOT plant dry beans during peak summer rains in this high-rainfall zone. Plant White Maize (SC719) or Soya Beans instead, or delay beans until post-rainy March/April.';
+          projectedKgHa = Math.round(benchmarkKgHa * 0.42);
+        } else {
+          score = 64;
+          suitabilityClass = 'S2 MODERATELY SUITABLE';
+          suitabilityRating = 'Caution Advised';
+          limitingReasons.push('Requires ridge planting to prevent waterlogging during summer cloudbursts.');
+          recommendationAction = 'Plant certified disease-tolerant varieties (Gloria / Rosecoco) on elevated beds.';
+          projectedKgHa = Math.round(benchmarkKgHa * 0.78);
+        }
+      } else if (cleanSeason.includes('winter')) {
+        // Beans in Winter without frost protection
+        if (cleanRegion.includes('highveld') || cleanRegion.includes('nyanga') || cleanRegion.includes('region i') || cleanRegion.includes('midlands')) {
+          score = 28;
+          isSuitable = false;
+          suitabilityClass = 'N UNSUITABLE';
+          suitabilityRating = 'High Frost Hazard';
+          limitingReasons.push('Freezing nocturnal temperatures (< 4°C) during winter cause severe vegetative scorch and lethal frost injury.');
+          limitingReasons.push('Dry beans have zero frost tolerance (lethal threshold is -0.5°C).');
+          recommendationAction = 'Unsuitable for winter open-field production. Plant Winter Wheat (SC Nduna) which thrives in cool winter temperatures under irrigation.';
+          projectedKgHa = Math.round(benchmarkKgHa * 0.30);
+        } else {
+          score = 72;
+          suitabilityClass = 'S2 MODERATELY SUITABLE';
+          recommendationAction = 'Ensure dedicated furrow or drip irrigation since winter has zero rainfall.';
+          projectedKgHa = Math.round(benchmarkKgHa * 0.85);
+        }
+      } else {
+        // Autumn post-rainy window (Feb - April)
+        score = 92;
+        suitabilityClass = 'S1 HIGHLY SUITABLE';
+        suitabilityRating = 'Optimal Legume Window';
+        opportunities.push('Residual soil moisture allows beans to flower in warm, dry sunlight without fungal pressure.');
+        recommendationAction = 'Prime window for dry beans. Plant immediately to capture residual subsoil moisture.';
+        projectedKgHa = Math.round(benchmarkKgHa * 1.18);
+      }
+    } 
+    // ── MAIZE RULES ──
+    else if (cleanCrop.includes('maize')) {
+      benchmarkKgHa = 5200;
+      if (cleanSeason.includes('winter')) {
+        score = 32;
+        isSuitable = false;
+        suitabilityClass = 'N UNSUITABLE';
+        suitabilityRating = 'Severe Thermal Deficit';
+        limitingReasons.push('Winter low thermal accumulation (insufficient Growing Degree Days) stunts maize elongation.');
+        limitingReasons.push('High frost risk damages tassel formation.');
+        recommendationAction = 'Do not plant summer maize in winter. Pivot to Winter Wheat or wait for November summer planting.';
+        projectedKgHa = Math.round(benchmarkKgHa * 0.35);
+      } else {
+        score = 94;
+        suitabilityClass = 'S1 HIGHLY SUITABLE';
+        suitabilityRating = 'Ideal Growing Conditions';
+        opportunities.push('Long warm sunshine hours and bimodal seasonal rains provide optimal photosynthesis.');
+        recommendationAction = 'Proceed with certified hybrid seed (SC719). Apply basal compound D at planting.';
+        projectedKgHa = Math.round(benchmarkKgHa * 1.15);
+      }
+    }
+    // ── WHEAT RULES ──
+    else if (cleanCrop.includes('wheat')) {
+      benchmarkKgHa = 4400;
+      if (cleanSeason.includes('summer')) {
+        score = 35;
+        isSuitable = false;
+        suitabilityClass = 'N UNSUITABLE';
+        suitabilityRating = 'High Heat / Humidity Deficit';
+        limitingReasons.push('High summer temperatures (>26°C) cause spikelet sterility and prevent vernalization.');
+        limitingReasons.push('Summer rainfall induces devastating stem rust and ear blight.');
+        recommendationAction = 'Wheat is strictly a winter irrigated crop in this latitude. Wait for May planting.';
+        projectedKgHa = Math.round(benchmarkKgHa * 0.30);
+      } else {
+        score = 95;
+        suitabilityClass = 'S1 HIGHLY SUITABLE';
+        opportunities.push('Cold winter highland nights promote strong tillering and heavy grain hardening.');
+        recommendationAction = 'Ensure 35mm weekly center pivot or sprinkler cycle.';
+        projectedKgHa = Math.round(benchmarkKgHa * 1.20);
+      }
+    }
+
+    const totalProjectedOutputMT = Number(((projectedKgHa * size) / 1000).toFixed(1));
+    const variancePct = Number((((projectedKgHa - benchmarkKgHa) / benchmarkKgHa) * 100).toFixed(1));
+
+    return {
+      crop: cropName,
+      region,
+      season,
+      inferredSeason,
+      areaHa: size,
+      score,
+      suitabilityClass,
+      suitabilityRating,
+      isSuitable,
+      limitingReasons,
+      opportunities,
+      recommendationAction,
+      benchmarkKgHa,
+      projectedKgHa,
+      totalProjectedOutputMT,
+      variancePct,
+      confidenceScore: isSuitable ? 94 : 96
     };
   }
 };
