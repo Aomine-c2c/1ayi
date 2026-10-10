@@ -270,8 +270,10 @@ Raw OpenAPI JSON: `http://localhost:5050/swagger/v1/swagger.json`
 - `GET /api/v1/health` — Verifies backend and database connectivity status.
 
 #### Authentication & Profiles
+- `POST /api/v1/auth/register` — Public registration endpoint for all user roles with automatic password hashing and administrative approval workflows.
 - `POST /api/v1/auth/token` — Authenticates credentials and returns a Bearer JWT.
 - `GET /api/v1/auth/me` *(Authorized)* — Returns authenticated user details and role.
+- `GET /api/v1/auth/demo-users` — Preconfigured database personas for instant testing.
 
 #### Farms & Geospatial
 - `GET /api/v1/farms` — Lists registered farms with location points and boundaries.
