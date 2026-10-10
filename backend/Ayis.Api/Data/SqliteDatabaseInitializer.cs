@@ -309,24 +309,7 @@ public static class SqliteDatabaseInitializer
 
     private static void EnsureDefaultUsers(IDbConnection conn)
     {
-        // Users (Password: Password123!)
-        var pwHash = BCrypt.Net.BCrypt.HashPassword("Password123!", 10);
-        conn.Execute(@"
-            INSERT OR IGNORE INTO users (id, username, email, password_hash, first_name, last_name, phone_number, role, is_active, is_staff)
-            VALUES 
-            ('u-001', 'chief', 'chief@ayis.org', @PwHash, 'Chief', 'Agrotechnologist', '+254 700 000 001', 'super_admin', 1, 1),
-            ('u-002', 'admin', 'admin@ayis.org', @PwHash, 'System', 'Administrator', '+254 700 000 002', 'system_admin', 1, 1),
-            ('u-003', 'alexk', 'alex.kipruto@ayis.org', @PwHash, 'Alex', 'Kipruto', '+254 700 112 233', 'system_admin', 1, 1),
-            ('u-004', 'sarahm', 'sarah.mwangi@ayis.org', @PwHash, 'Dr. Sarah', 'Mwangi', '+254 711 223 344', 'agronomist', 1, 0),
-            ('u-005', 'gracew', 'grace.wanjiku@ayis.org', @PwHash, 'Grace', 'Wanjiku', '+254 733 445 566', 'extension_officer', 1, 0),
-            ('u-006', 'danielk', 'daniel.kiprop@ayis.org', @PwHash, 'Daniel', 'Kiprop', '+254 721 889 900', 'weather_analyst', 1, 0),
-            ('u-007', 'davidm', 'david.mwangi@estate.ke', @PwHash, 'David', 'Mwangi', '+254 722 998 877', 'farm_manager', 1, 0),
-            ('u-008', 'johnk', 'john.kamau@farms.ke', @PwHash, 'John', 'Kamau', '+254 712 345 678', 'farmer', 1, 0),
-            ('u-009', 'alicec', 'alice.chebet@farms.ke', @PwHash, 'Alice', 'Chebet', '+254 722 334 455', 'farmer', 1, 0),
-            ('u-010', 'peterk', 'peter.koech@ayis.org', @PwHash, 'Peter', 'Koech', '+254 720 334 455', 'field_officer', 1, 0),
-            ('u-011', 'samuelo', 'samuel.o@farms.ke', @PwHash, 'Samuel', 'Ochieng', '+254 733 112 233', 'farmer', 1, 0),
-            ('u-012', 'maryw', 'mary.wambui@farms.ke', @PwHash, 'Mary', 'Wambui', '+254 744 556 677', 'farmer', 1, 0);",
-            new { PwHash = pwHash });
+        // No preconfigured users; clean database where users register directly
     }
 
     private static void SeedData(IDbConnection conn)

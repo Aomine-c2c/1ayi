@@ -72,11 +72,11 @@ export const superAdminViews = {
               <span style="font-size: 0.8rem; color: var(--primary-dark); font-weight: 700;">🟢 Unified Operations Hub</span>
             </div>
             <h1 style="font-size: 1.85rem; font-weight: 900; color: var(--text-primary); letter-spacing: -0.5px; margin: 0 0 6px 0;">
-              Executive Command: Chief Agrotechnology Officer
+              Executive Command: ${user.firstName ? `${user.firstName} ${user.lastName}` : (user.username || 'Chief Agrotechnology Officer')}
             </h1>
             <p style="color: var(--text-secondary); margin: 0; font-size: 0.92rem; max-width: 780px;">
-              Holistic oversight across <strong>12 agro-ecological counties</strong>, <strong>${totalCultivatedArea} monitored hectares</strong>,
-              and <strong>${farmers.length * 310} registered smallholders</strong>. Dual-lens visibility into <strong>Platform Health</strong> and <strong>Agricultural Intelligence</strong>.
+              Department: <strong>${user.organization || 'National Agricultural Ministry & Governance'}</strong>. Holistic oversight across agro-ecological zones, <strong>${totalCultivatedArea} monitored hectares</strong>,
+              and <strong>${farms.length} registered agricultural holdings</strong>. Dual-lens visibility into <strong>Platform Health</strong> and <strong>Agricultural Intelligence</strong>.
             </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">

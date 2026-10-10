@@ -34,38 +34,15 @@ export const authViews = {
       document.body.appendChild(overlay);
     }
 
-    const roleMeta = {
-      farmer: { title: 'Farmer', icon: '🌾' },
-      agronomist: { title: 'Agronomist', icon: '🔬' },
-      system_admin: { title: 'System Admin', icon: '🛡️' },
-      extension_officer: { title: 'Extension Officer', icon: '🤝' },
-      weather_analyst: { title: 'Weather Analyst', icon: '⛅' },
-      farm_manager: { title: 'Farm Manager', icon: '🚜' },
-      field_officer: { title: 'Field Officer', icon: '📋' },
-      super_admin: { title: 'Super Admin', icon: '👑' }
-    };
-
-    // Preconfigured database users (seeded in SQLite users table)
-    let currentDemoUsers = [
-      { role: 'farmer', username: 'johnk', firstName: 'John', lastName: 'Kamau' },
-      { role: 'agronomist', username: 'sarahm', firstName: 'Dr. Sarah', lastName: 'Mwangi' },
-      { role: 'system_admin', username: 'admin', firstName: 'System', lastName: 'Administrator' },
-      { role: 'extension_officer', username: 'gracew', firstName: 'Grace', lastName: 'Wanjiku' },
-      { role: 'weather_analyst', username: 'danielk', firstName: 'Daniel', lastName: 'Kiprop' },
-      { role: 'farm_manager', username: 'davidm', firstName: 'David', lastName: 'Mwangi' },
-      { role: 'field_officer', username: 'peterk', firstName: 'Peter', lastName: 'Koech' },
-      { role: 'super_admin', username: 'chief', firstName: 'Chief', lastName: 'Agrotechnologist' }
-    ];
-
-    let currentUsernameValue = initialUsername || 'sarah.mwangi@ayis.org';
-    let currentPasswordValue = initialUsername ? '' : 'Password123!';
+    let currentUsernameValue = initialUsername || '';
+    let currentPasswordValue = '';
 
     const renderLoginForm = (errorMsg = '', alertType = 'critical', isSubmitting = false) => {
       const activeNotice = errorMsg || initialNotice;
       const effectiveAlertType = errorMsg ? alertType : defaultAlertType;
 
       overlay.innerHTML = `
-        <div class="modal-window" role="dialog" aria-modal="true" style="max-width: 520px; width: 100%;">
+        <div class="modal-window" role="dialog" aria-modal="true" style="max-width: 460px; width: 100%;">
           <div class="modal-header">
             <div>
               <div style="display: flex; align-items: center; gap: 6px;">
@@ -85,57 +62,6 @@ export const authViews = {
               </div>
             ` : ''}
 
-            <!-- 1-Click Preconfigured Demo Personas Grid (Queried from SQLite Database) -->
-            <div style="margin-bottom: 18px; padding: 12px 14px; background: var(--bg-primary); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <span style="font-size: 0.72rem; font-weight: 800; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 5px;">
-                  ⚡ Quick 1-Click Demo Login
-                </span>
-                <span style="font-size: 0.68rem; color: var(--text-muted);">Database-seeded accounts</span>
-              </div>
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;" id="demoPersonaGrid">
-                ${currentDemoUsers.map(u => {
-                  const roleKey = (u.role || u.Role || '').toLowerCase();
-                  const meta = roleMeta[roleKey] || roleMeta[u.role] || roleMeta[u.Role] || { title: u.role || u.Role || 'User', icon: '🌱' };
-                  const firstName = u.firstName || u.FirstName || '';
-                  const lastName = u.lastName || u.LastName || '';
-                  const username = u.username || u.Username || '';
-                  const displayName = `${firstName} ${lastName}`.trim() || username;
-                  const shortName = firstName || displayName.split(' ')[0] || username;
-                  return `
-                  <button 
-                    type="button" 
-                    class="demo-user-btn" 
-                    id="btnDemo_${username}"
-                    data-username="${username}" 
-                    data-password="Password123!" 
-                    data-role="${meta.title}"
-                    data-name="${displayName}"
-                    ${isSubmitting ? 'disabled' : ''}
-                    title="1-Click Login from Database: ${displayName} (${meta.title})"
-                  >
-                    <span style="font-size: 1.15rem; line-height: 1; flex-shrink: 0;">${meta.icon}</span>
-                    <div style="min-width: 0; flex: 1;">
-                      <div style="font-size: 0.78rem; font-weight: 800; color: var(--text-primary); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        ${meta.title}
-                      </div>
-                      <div style="font-size: 0.68rem; color: var(--text-muted); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        ${username} · ${shortName}
-                      </div>
-                    </div>
-                  </button>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-
-            <div style="position: relative; text-align: center; margin: 16px 0 14px;">
-              <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 0;">
-              <span style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); background: var(--bg-secondary); padding: 0 10px; font-size: 0.7rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">
-                Or Sign In Manually
-              </span>
-            </div>
-
             <form id="loginForm">
               <div class="form-group">
                 <label class="form-label" for="loginInputUser">Email Address or Username</label>
@@ -144,12 +70,12 @@ export const authViews = {
                   id="loginInputUser" 
                   name="emailOrUsername" 
                   type="text" 
-                  placeholder="e.g. sarah.mwangi@ayis.org or farmer" 
+                  placeholder="Enter your registered email or username" 
                   value="${currentUsernameValue}"
                   required
                   ${isSubmitting ? 'disabled' : ''}
                 >
-                <span class="form-hint">Tip: test 'disabled@ayis.org' for disabled state or 'locked@ayis.org' for locked state.</span>
+                <span class="form-hint">Enter the username or email you registered with.</span>
               </div>
 
               <div class="form-group">
@@ -270,26 +196,7 @@ export const authViews = {
         }
       };
 
-      // Bind 1-Click Demo Login Persona Cards
-      const demoBtns = overlay.querySelectorAll('.demo-user-btn');
-      demoBtns.forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          e.preventDefault();
-          if (btn.disabled) return;
-          const username = btn.dataset.username;
-          const password = btn.dataset.password;
-          
-          // Provide instant feedback in inputs
-          const userInput = overlay.querySelector('#loginInputUser');
-          const passInput = overlay.querySelector('#loginInputPass');
-          if (userInput) userInput.value = username;
-          if (passInput) passInput.value = password;
-
-          await executeLogin(username, password, true);
-        });
-      });
-
-      // Submit handler for manual form
+      // Submit handler for login form
       const form = overlay.querySelector('#loginForm');
       form.onsubmit = async (e) => {
         e.preventDefault();
@@ -301,16 +208,6 @@ export const authViews = {
     };
 
     renderLoginForm();
-
-    // Dynamically fetch seeded accounts from SQLite database API and refresh grid
-    authService.getDemoUsers().then(dbUsers => {
-      if (Array.isArray(dbUsers) && dbUsers.length > 0 && overlay.classList.contains('active')) {
-        currentDemoUsers = dbUsers;
-        renderLoginForm();
-      }
-    }).catch(err => {
-      console.warn('[authViews] Demo users database fetch fallback:', err);
-    });
   },
 
   // =========================================================================
@@ -318,27 +215,53 @@ export const authViews = {
   // =========================================================================
   renderRegisterView(container) {
     let currentStep = 1;
-    const totalSteps = 3;
+    const totalSteps = 4;
     let isSubmitting = false;
 
     const formData = {
-      // Step 1
+      // Step 1: Credentials
       username: '',
       email: '',
       password: '',
       confirmPassword: '',
-      // Step 2
+      // Step 2: Personal Profile & Role
       firstName: '',
       lastName: '',
       phoneNumber: '',
-      role: 'farmer'
+      role: 'farmer',
+      // Step 3: Role-Specific Details
+      // For Farmer / Farm Manager
+      farmName: '',
+      farmSizeHa: '5.0',
+      regionOrCounty: 'Mashonaland East',
+      primaryCrop: 'Maize (SC719)',
+      soilType: 'Sandy Clay Loam (pH 6.2)',
+      irrigationType: 'Rainfed',
+      farmLatitude: '-17.8252',
+      farmLongitude: '31.0335',
+      // For Agronomist
+      organization: 'KALRO / DR&SS Research Station',
+      specialization: 'Crop Phenology & Soil Fertility',
+      focusCrops: 'Maize, Sorghum, Soya Beans',
+      // For Extension Officer
+      stationOrOffice: 'District Agritex Office',
+      farmerCapacity: '150 Smallholders',
+      // For Field Officer
+      complianceZone: 'Zone B - Commercial Belt',
+      gapCertificationFocus: 'GlobalGAP & Pest Scouting',
+      // For Weather Analyst
+      weatherStationName: 'Harare Met Synoptic Station',
+      telemetryFocus: 'Automatic Weather Stations (AWS) & Agromet Indices',
+      // For Admins
+      adminDepartment: 'Agricultural Ministry IT & Spatial Systems',
+      securityClearance: 'National Level 3 Clearance'
     };
 
     const rolesList = [
-      { id: 'farmer', title: 'Smallholder Farmer', icon: '🌾', desc: 'Direct access to smart yield advisories, crop calendar, and weather intelligence.', requiresApproval: false },
-      { id: 'agronomist', title: 'Agronomist & Specialist', icon: '🔬', desc: 'Crop disease diagnostics, suitability models, and recommendation pipelines.', requiresApproval: false },
+      { id: 'farmer', title: 'Smallholder Farmer', icon: '🌾', desc: 'Direct access to smart yield advisories, crop calendar, and register your farm.', requiresApproval: false },
+      { id: 'agronomist', title: 'Agronomist & Specialist', icon: '🔬', desc: 'Crop disease diagnostics, research models, and agrometeorology recommendations.', requiresApproval: false },
       { id: 'extension_officer', title: 'Extension Officer', icon: '🤝', desc: 'Field inspections, farmer outreach registry, and county advisory dissemination.', requiresApproval: false },
-      { id: 'farm_manager', title: 'Commercial Farm Manager', icon: '🚜', desc: 'Estate parcels, multi-field cycle operations, and labor scheduling.', requiresApproval: false },
+      { id: 'farm_manager', title: 'Commercial Farm Manager', icon: '🚜', desc: 'Estate parcels, multi-field operations, farm equipment, and labor scheduling.', requiresApproval: false },
       { id: 'weather_analyst', title: 'Weather Analyst', icon: '⛅', desc: 'Meteorological telemetry stations, sensor QA, and early warning blasts.', requiresApproval: false },
       { id: 'field_officer', title: 'Field Compliance Officer', icon: '📋', desc: 'GAP certifications, pest scouting records, and soil audits.', requiresApproval: false },
       { id: 'system_admin', title: 'System Administrator', icon: '🛡️', desc: 'Administrative control, user provisioning, and audit logs. Requires administrator approval.', requiresApproval: true },
@@ -365,7 +288,7 @@ export const authViews = {
       const strength = calculatePasswordStrength(formData.password);
 
       container.innerHTML = `
-        <div class="register-view-container" style="max-width: 780px; margin: 32px auto; padding: 0 16px;">
+        <div class="register-view-container" style="max-width: 820px; margin: 32px auto; padding: 0 16px;">
           <!-- Header Banner -->
           <div style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); border-radius: var(--radius-md) var(--radius-md) 0 0; padding: 28px 32px; color: #fff; position: relative; overflow: hidden; box-shadow: var(--shadow-sm);">
             <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: flex-start;">
@@ -375,8 +298,8 @@ export const authViews = {
                   <span class="badge badge-green" style="background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.3); font-size: 0.72rem; letter-spacing: 0.5px;">AYIS USER REGISTRATION</span>
                 </div>
                 <h1 style="font-size: 1.6rem; font-weight: 800; color: #fff; margin: 0 0 6px 0; letter-spacing: -0.5px;">Create Your Account</h1>
-                <p style="font-size: 0.875rem; color: #a7f3d0; margin: 0; max-width: 500px;">
-                  Join the Zimbabwe Agricultural Yield Intelligence Platform to access real-time agromet telemetry and crop models.
+                <p style="font-size: 0.875rem; color: #a7f3d0; margin: 0; max-width: 520px;">
+                  Join the Zimbabwe Agricultural Yield Intelligence Platform to access real-time agromet telemetry and tailored farm intelligence.
                 </p>
               </div>
               <div style="text-align: right;">
@@ -386,18 +309,22 @@ export const authViews = {
           </div>
 
           <!-- Wizard Progress Stepper -->
-          <div style="background: var(--bg-secondary); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 16px 32px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; gap: 12px;">
-            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-              <div style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; background: ${currentStep >= 1 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 1 ? '#fff' : 'var(--text-muted)'};">1</div>
-              <div style="font-size: 0.8rem; font-weight: ${currentStep === 1 ? '800' : '600'}; color: ${currentStep >= 1 ? 'var(--text-primary)' : 'var(--text-muted)'};">Account Credentials</div>
+          <div style="background: var(--bg-secondary); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 14px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; gap: 8px; overflow-x: auto;">
+            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 130px;">
+              <div style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; background: ${currentStep >= 1 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 1 ? '#fff' : 'var(--text-muted)'};">1</div>
+              <div style="font-size: 0.75rem; font-weight: ${currentStep === 1 ? '800' : '600'}; color: ${currentStep >= 1 ? 'var(--text-primary)' : 'var(--text-muted)'}; white-space: nowrap;">Credentials</div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-              <div style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; background: ${currentStep >= 2 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 2 ? '#fff' : 'var(--text-muted)'};">2</div>
-              <div style="font-size: 0.8rem; font-weight: ${currentStep === 2 ? '800' : '600'}; color: ${currentStep >= 2 ? 'var(--text-primary)' : 'var(--text-muted)'};">Profile & Role</div>
+            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 130px;">
+              <div style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; background: ${currentStep >= 2 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 2 ? '#fff' : 'var(--text-muted)'};">2</div>
+              <div style="font-size: 0.75rem; font-weight: ${currentStep === 2 ? '800' : '600'}; color: ${currentStep >= 2 ? 'var(--text-primary)' : 'var(--text-muted)'}; white-space: nowrap;">Role & Profile</div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-              <div style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; background: ${currentStep >= 3 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 3 ? '#fff' : 'var(--text-muted)'};">3</div>
-              <div style="font-size: 0.8rem; font-weight: ${currentStep === 3 ? '800' : '600'}; color: ${currentStep >= 3 ? 'var(--text-primary)' : 'var(--text-muted)'};">Verification & Submit</div>
+            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 150px;">
+              <div style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; background: ${currentStep >= 3 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 3 ? '#fff' : 'var(--text-muted)'};">3</div>
+              <div style="font-size: 0.75rem; font-weight: ${currentStep === 3 ? '800' : '600'}; color: ${currentStep >= 3 ? 'var(--text-primary)' : 'var(--text-muted)'}; white-space: nowrap;">Role Details</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 130px;">
+              <div style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; background: ${currentStep >= 4 ? 'var(--primary)' : 'var(--bg-tertiary)'}; color: ${currentStep >= 4 ? '#fff' : 'var(--text-muted)'};">4</div>
+              <div style="font-size: 0.75rem; font-weight: ${currentStep === 4 ? '800' : '600'}; color: ${currentStep >= 4 ? 'var(--text-primary)' : 'var(--text-muted)'}; white-space: nowrap;">Review & Finish</div>
             </div>
           </div>
 
@@ -460,10 +387,10 @@ export const authViews = {
               </div>
             ` : ''}
 
-            <!-- Step 2: Profile & Role Details -->
+            <!-- Step 2: Profile & Role Selection -->
             ${currentStep === 2 ? `
               <div>
-                <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin: 0 0 16px 0;">Step 2: Profile Details & Role Assignment</h2>
+                <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin: 0 0 16px 0;">Step 2: Profile Details & Role Selection</h2>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
                   Specify your personal profile details and select which operational role you fulfill.
                 </p>
@@ -507,12 +434,230 @@ export const authViews = {
               </div>
             ` : ''}
 
-            <!-- Step 3: Review & Submit -->
+            <!-- Step 3: Role-Specific Custom Details -->
             ${currentStep === 3 ? `
               <div>
-                <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin: 0 0 16px 0;">Step 3: Verification & Confirmation</h2>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                  <span style="font-size: 1.6rem;">${selectedRoleMeta.icon}</span>
+                  <div>
+                    <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin: 0;">
+                      Step 3: ${selectedRoleMeta.title} Details
+                    </h2>
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">
+                      Tailored information required specifically for your role as <strong>${selectedRoleMeta.title}</strong>.
+                    </span>
+                  </div>
+                </div>
+                <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 16px 0 20px;">
+
+                <!-- Conditional Forms According to Selected Role -->
+                ${(formData.role === 'farmer' || formData.role === 'farm_manager') ? `
+                  <div>
+                    <div style="background: var(--primary-light); border: 1px solid #6ee7b7; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 18px; font-size: 0.8125rem; color: var(--primary-dark);">
+                      🌾 <strong>Farm Onboarding Integration:</strong> Registering your farm here automatically provisions your farm record in the database, maps satellite telemetry to your parcel, and configures yield forecasts!
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 18px;">
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="regFarmName">Farm Name / Holding <span style="color: var(--accent-rose);">*</span></label>
+                        <input class="form-input" id="regFarmName" type="text" placeholder="e.g. Green Valley Estate, Moyo Smallholding" value="${formData.farmName}" required>
+                      </div>
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="regFarmSizeHa">Size in Hectares (Ha) <span style="color: var(--accent-rose);">*</span></label>
+                        <input class="form-input" id="regFarmSizeHa" type="number" step="0.1" min="0.1" placeholder="5.0" value="${formData.farmSizeHa}">
+                      </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px;">
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="regRegionOrCounty">Province / Region <span style="color: var(--accent-rose);">*</span></label>
+                        <select class="form-select" id="regRegionOrCounty">
+                          <option value="Mashonaland East" ${formData.regionOrCounty === 'Mashonaland East' ? 'selected' : ''}>Mashonaland East (Natural Region II)</option>
+                          <option value="Mashonaland Central" ${formData.regionOrCounty === 'Mashonaland Central' ? 'selected' : ''}>Mashonaland Central (Natural Region II)</option>
+                          <option value="Mashonaland West" ${formData.regionOrCounty === 'Mashonaland West' ? 'selected' : ''}>Mashonaland West (Natural Region II)</option>
+                          <option value="Manicaland" ${formData.regionOrCounty === 'Manicaland' ? 'selected' : ''}>Manicaland (Natural Region I)</option>
+                          <option value="Midlands" ${formData.regionOrCounty === 'Midlands' ? 'selected' : ''}>Midlands (Natural Region III)</option>
+                          <option value="Masvingo" ${formData.regionOrCounty === 'Masvingo' ? 'selected' : ''}>Masvingo (Natural Region IV)</option>
+                          <option value="Matabeleland North" ${formData.regionOrCounty === 'Matabeleland North' ? 'selected' : ''}>Matabeleland North (Natural Region IV)</option>
+                          <option value="Matabeleland South" ${formData.regionOrCounty === 'Matabeleland South' ? 'selected' : ''}>Matabeleland South (Natural Region V)</option>
+                        </select>
+                      </div>
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="regPrimaryCrop">Primary Crop Variety <span style="color: var(--accent-rose);">*</span></label>
+                        <select class="form-select" id="regPrimaryCrop">
+                          <option value="Maize (SC719)" ${formData.primaryCrop.includes('Maize') ? 'selected' : ''}>Maize (SC719 / White Maize)</option>
+                          <option value="Sorghum (Macia)" ${formData.primaryCrop.includes('Sorghum') ? 'selected' : ''}>Sorghum (Macia Drought Tolerant)</option>
+                          <option value="Wheat (SC Nduna)" ${formData.primaryCrop.includes('Wheat') ? 'selected' : ''}>Winter Wheat (SC Nduna)</option>
+                          <option value="Soybean (PAN 1867)" ${formData.primaryCrop.includes('Soybean') ? 'selected' : ''}>Soybean (PAN 1867)</option>
+                          <option value="Tobacco (Virginia flue-cured)" ${formData.primaryCrop.includes('Tobacco') ? 'selected' : ''}>Tobacco (Flue-cured)</option>
+                          <option value="Horticulture (Tomatoes/Cabbage)" ${formData.primaryCrop.includes('Horticulture') ? 'selected' : ''}>Horticulture (Tomatoes / Onions)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px;">
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="regSoilType">Predominant Soil Type</label>
+                        <select class="form-select" id="regSoilType">
+                          <option value="Sandy Clay Loam (pH 6.2)" ${formData.soilType.includes('Sandy Clay') ? 'selected' : ''}>Sandy Clay Loam (pH 6.2)</option>
+                          <option value="Red Clay Loam (Fersiallitic, pH 6.0)" ${formData.soilType.includes('Red Clay') ? 'selected' : ''}>Red Clay Loam (Fersiallitic)</option>
+                          <option value="Granitic Sandy Soil (pH 5.4)" ${formData.soilType.includes('Granitic') ? 'selected' : ''}>Granitic Sandy Soil (pH 5.4)</option>
+                          <option value="Black Vertisol / Heavy Clay" ${formData.soilType.includes('Vertisol') ? 'selected' : ''}>Black Vertisol / Heavy Clay</option>
+                        </select>
+                      </div>
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="regIrrigationType">Irrigation Infrastructure</label>
+                        <select class="form-select" id="regIrrigationType">
+                          <option value="Rainfed" ${formData.irrigationType === 'Rainfed' ? 'selected' : ''}>Rainfed / Dryland</option>
+                          <option value="Center Pivot" ${formData.irrigationType === 'Center Pivot' ? 'selected' : ''}>Center Pivot (Mechanized)</option>
+                          <option value="Drip Irrigation" ${formData.irrigationType === 'Drip Irrigation' ? 'selected' : ''}>Drip Irrigation (High efficiency)</option>
+                          <option value="Sprinkler / Overhead" ${formData.irrigationType === 'Sprinkler / Overhead' ? 'selected' : ''}>Sprinkler / Overhead</option>
+                          <option value="Furrow / Flood" ${formData.irrigationType === 'Furrow / Flood' ? 'selected' : ''}>Furrow / Flood</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="regFarmLat">Farm Latitude (WGS84)</label>
+                        <input class="form-input" id="regFarmLat" type="number" step="0.0001" placeholder="-17.8252" value="${formData.farmLatitude}">
+                        <span class="form-hint">Decimal degrees south (e.g. -17.8252)</span>
+                      </div>
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="regFarmLon">Farm Longitude (WGS84)</label>
+                        <input class="form-input" id="regFarmLon" type="number" step="0.0001" placeholder="31.0335" value="${formData.farmLongitude}">
+                        <span class="form-hint">Decimal degrees east (e.g. 31.0335)</span>
+                      </div>
+                    </div>
+                  </div>
+                ` : ''}
+
+                ${formData.role === 'agronomist' ? `
+                  <div>
+                    <div style="background: var(--primary-light); border: 1px solid #6ee7b7; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 18px; font-size: 0.8125rem; color: var(--primary-dark);">
+                      🔬 <strong>Agronomic Model Authority:</strong> As an agronomist, you will configure regional crop calendars, review pest alerts, and validate suitability models.
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 18px;">
+                      <label class="form-label" for="regOrganization">Research Institute / Organization <span style="color: var(--accent-rose);">*</span></label>
+                      <input class="form-input" id="regOrganization" type="text" placeholder="e.g. DR&SS, CIMMYT, ICRISAT, Seed Co Research" value="${formData.organization}" required>
+                      <span class="form-hint">Affiliated agricultural university, research department, or agronomic firm.</span>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 18px;">
+                      <label class="form-label" for="regSpecialization">Primary Agronomic Specialty <span style="color: var(--accent-rose);">*</span></label>
+                      <select class="form-select" id="regSpecialization">
+                        <option value="Crop Phenology & Soil Fertility" ${formData.specialization.includes('Phenology') ? 'selected' : ''}>Crop Phenology & Soil Fertility</option>
+                        <option value="Plant Pathology & Pest Management (IPM)" ${formData.specialization.includes('Pathology') ? 'selected' : ''}>Plant Pathology & Integrated Pest Management (IPM)</option>
+                        <option value="Agrometeorology & Climate Adaptation" ${formData.specialization.includes('Agrometeorology') ? 'selected' : ''}>Agrometeorology & Climate Adaptation</option>
+                        <option value="Seed Variety Performance & Breeding" ${formData.specialization.includes('Breeding') ? 'selected' : ''}>Seed Variety Performance & Breeding</option>
+                        <option value="Irrigation Scheduling & Soil Hydrology" ${formData.specialization.includes('Hydrology') ? 'selected' : ''}>Irrigation Scheduling & Soil Hydrology</option>
+                      </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="regFocusCrops">Target Research / Priority Crops <span style="color: var(--accent-rose);">*</span></label>
+                      <input class="form-input" id="regFocusCrops" type="text" placeholder="e.g. Maize, Sorghum, Pearl Millet, Sunflower" value="${formData.focusCrops}">
+                      <span class="form-hint">Specific crops where you will contribute diagnostic advisories.</span>
+                    </div>
+                  </div>
+                ` : ''}
+
+                ${formData.role === 'extension_officer' ? `
+                  <div>
+                    <div style="background: var(--primary-light); border: 1px solid #6ee7b7; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 18px; font-size: 0.8125rem; color: var(--primary-dark);">
+                      🤝 <strong>Farmer Outreach & Agritex:</strong> Extension officers monitor farming clusters, coordinate field days, and broadcast localized agromet advisories.
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 18px;">
+                      <label class="form-label" for="regStationOrOffice">Assigned Extension District / Agritex Office <span style="color: var(--accent-rose);">*</span></label>
+                      <input class="form-input" id="regStationOrOffice" type="text" placeholder="e.g. Goromonzi District Agritex, Marondera Ward 4" value="${formData.stationOrOffice}" required>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="regRegionOrCounty">Assigned Province <span style="color: var(--accent-rose);">*</span></label>
+                        <select class="form-select" id="regRegionOrCounty">
+                          <option value="Mashonaland East" ${formData.regionOrCounty === 'Mashonaland East' ? 'selected' : ''}>Mashonaland East</option>
+                          <option value="Mashonaland Central" ${formData.regionOrCounty === 'Mashonaland Central' ? 'selected' : ''}>Mashonaland Central</option>
+                          <option value="Mashonaland West" ${formData.regionOrCounty === 'Mashonaland West' ? 'selected' : ''}>Mashonaland West</option>
+                          <option value="Manicaland" ${formData.regionOrCounty === 'Manicaland' ? 'selected' : ''}>Manicaland</option>
+                          <option value="Midlands" ${formData.regionOrCounty === 'Midlands' ? 'selected' : ''}>Midlands</option>
+                          <option value="Masvingo" ${formData.regionOrCounty === 'Masvingo' ? 'selected' : ''}>Masvingo</option>
+                          <option value="Matabeleland North" ${formData.regionOrCounty === 'Matabeleland North' ? 'selected' : ''}>Matabeleland North</option>
+                          <option value="Matabeleland South" ${formData.regionOrCounty === 'Matabeleland South' ? 'selected' : ''}>Matabeleland South</option>
+                        </select>
+                      </div>
+                      <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="regFarmerCapacity">Supervised Farmer Capacity</label>
+                        <input class="form-input" id="regFarmerCapacity" type="text" placeholder="e.g. 150 Smallholders" value="${formData.farmerCapacity}">
+                      </div>
+                    </div>
+                  </div>
+                ` : ''}
+
+                ${formData.role === 'field_officer' ? `
+                  <div>
+                    <div style="background: var(--primary-light); border: 1px solid #6ee7b7; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 18px; font-size: 0.8125rem; color: var(--primary-dark);">
+                      📋 <strong>Field Auditing & Compliance:</strong> Field officers verify spatial boundaries, monitor pesticide spray logs, and validate yield audit trials.
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 18px;">
+                      <label class="form-label" for="regComplianceZone">Field Inspection Zone / District <span style="color: var(--accent-rose);">*</span></label>
+                      <input class="form-input" id="regComplianceZone" type="text" placeholder="e.g. Mazowe Valley Commercial Zone A" value="${formData.complianceZone}" required>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="regGapCertificationFocus">Primary Standard & Inspection Focus <span style="color: var(--accent-rose);">*</span></label>
+                      <input class="form-input" id="regGapCertificationFocus" type="text" placeholder="e.g. GlobalGAP, Organic Soil Cert, Pest Scouting" value="${formData.gapCertificationFocus}">
+                    </div>
+                  </div>
+                ` : ''}
+
+                ${formData.role === 'weather_analyst' ? `
+                  <div>
+                    <div style="background: var(--primary-light); border: 1px solid #6ee7b7; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 18px; font-size: 0.8125rem; color: var(--primary-dark);">
+                      ⛅ <strong>Agromet & Sensor Telemetry:</strong> Weather analysts supervise AWS telemetry feeds, radar forecasts, and meteorological drought indices.
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 18px;">
+                      <label class="form-label" for="regWeatherStationName">Primary Meteorological Station / Office <span style="color: var(--accent-rose);">*</span></label>
+                      <input class="form-input" id="regWeatherStationName" type="text" placeholder="e.g. MSD Belvedere Synoptic Station, Harare" value="${formData.weatherStationName}" required>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="regTelemetryFocus">Primary Telemetry Focus & Tools <span style="color: var(--accent-rose);">*</span></label>
+                      <input class="form-input" id="regTelemetryFocus" type="text" placeholder="e.g. AWS Grid Sensors, SPI Drought Indices, Rainfall Gauging" value="${formData.telemetryFocus}">
+                    </div>
+                  </div>
+                ` : ''}
+
+                ${(formData.role === 'system_admin' || formData.role === 'super_admin') ? `
+                  <div>
+                    <div style="background: var(--accent-amber-light); border: 1px solid #fcd34d; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 18px; font-size: 0.8125rem; color: var(--accent-amber);">
+                      🛡️ <strong>Administrative Clearance:</strong> Elevated administrative privileges require verification of government or institutional authority.
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 18px;">
+                      <label class="form-label" for="regAdminDepartment">Ministry / Institutional Department <span style="color: var(--accent-rose);">*</span></label>
+                      <input class="form-input" id="regAdminDepartment" type="text" placeholder="e.g. Ministry of Lands, Agriculture, Fisheries & Rural Development" value="${formData.adminDepartment}" required>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                      <label class="form-label" for="regSecurityClearance">Security & Delegation Authorization <span style="color: var(--accent-rose);">*</span></label>
+                      <input class="form-input" id="regSecurityClearance" type="text" placeholder="e.g. National Admin Level 3 Clearance / Officer Reg ID" value="${formData.securityClearance}">
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            ` : ''}
+
+            <!-- Step 4: Verification & Confirmation -->
+            ${currentStep === 4 ? `
+              <div>
+                <h2 style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin: 0 0 16px 0;">Step 4: Verification & Confirmation</h2>
                 <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">
-                  Please verify your registration details below before creating your account in the system database.
+                  Please verify your credentials and role-specific details below before creating your account in the system database.
                 </p>
 
                 <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 18px 20px; margin-bottom: 20px;">
@@ -543,6 +688,55 @@ export const authViews = {
                         </span>
                       </div>
                     </div>
+
+                    <!-- Role-Specific Review Details -->
+                    <div style="grid-column: span 2; border-top: 1px solid var(--border-subtle); padding-top: 12px; margin-top: 4px; background: rgba(0,0,0,0.02); border-radius: var(--radius-xs); padding: 12px;">
+                      <div style="font-size: 0.72rem; font-weight: 800; color: var(--primary-dark); text-transform: uppercase; margin-bottom: 6px;">
+                        ${selectedRoleMeta.title} Profile Specification
+                      </div>
+                      ${(formData.role === 'farmer' || formData.role === 'farm_manager') ? `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.825rem;">
+                          <div><strong>Farm Name:</strong> ${formData.farmName || 'Pending'}</div>
+                          <div><strong>Size:</strong> ${formData.farmSizeHa} Ha</div>
+                          <div><strong>Province:</strong> ${formData.regionOrCounty}</div>
+                          <div><strong>Crop:</strong> ${formData.primaryCrop}</div>
+                          <div><strong>Irrigation:</strong> ${formData.irrigationType}</div>
+                          <div><strong>Coordinates:</strong> ${formData.farmLatitude}, ${formData.farmLongitude}</div>
+                        </div>
+                      ` : ''}
+                      ${formData.role === 'agronomist' ? `
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 8px; font-size: 0.825rem;">
+                          <div><strong>Institution:</strong> ${formData.organization}</div>
+                          <div><strong>Specialty:</strong> ${formData.specialization}</div>
+                          <div><strong>Target Crops:</strong> ${formData.focusCrops}</div>
+                        </div>
+                      ` : ''}
+                      ${formData.role === 'extension_officer' ? `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.825rem;">
+                          <div><strong>Extension Office:</strong> ${formData.stationOrOffice}</div>
+                          <div><strong>Assigned Province:</strong> ${formData.regionOrCounty}</div>
+                          <div><strong>Farmer Reach:</strong> ${formData.farmerCapacity}</div>
+                        </div>
+                      ` : ''}
+                      ${formData.role === 'field_officer' ? `
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 8px; font-size: 0.825rem;">
+                          <div><strong>Compliance Zone:</strong> ${formData.complianceZone}</div>
+                          <div><strong>Certification Focus:</strong> ${formData.gapCertificationFocus}</div>
+                        </div>
+                      ` : ''}
+                      ${formData.role === 'weather_analyst' ? `
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 8px; font-size: 0.825rem;">
+                          <div><strong>Telemetry Station:</strong> ${formData.weatherStationName}</div>
+                          <div><strong>Telemetry Focus:</strong> ${formData.telemetryFocus}</div>
+                        </div>
+                      ` : ''}
+                      ${(formData.role === 'system_admin' || formData.role === 'super_admin') ? `
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 8px; font-size: 0.825rem;">
+                          <div><strong>Ministry / Dept:</strong> ${formData.adminDepartment}</div>
+                          <div><strong>Security Authorization:</strong> ${formData.securityClearance}</div>
+                        </div>
+                      ` : ''}
+                    </div>
                   </div>
                 </div>
 
@@ -557,7 +751,7 @@ export const authViews = {
                   <div role="alert" style="background: var(--primary-light); border: 1px solid #6ee7b7; border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 20px; font-size: 0.8125rem; color: var(--primary-dark); display: flex; align-items: flex-start; gap: 10px;">
                     <span style="font-size: 1.25rem; line-height: 1;">⚡</span>
                     <div>
-                      <strong>Instant Access:</strong> Your account will be activated immediately upon registration. You will be redirected to sign in with your chosen credentials.
+                      <strong>Instant Access:</strong> Your account will be activated immediately upon registration. You will be redirected to sign in with your credentials.
                     </div>
                   </div>
                 `}
@@ -598,7 +792,7 @@ export const authViews = {
         </div>
       `;
 
-      // ── Event Bindings ──
+      // ── Event Bindings: Step 1 Inputs ──
       const regUsernameInput = container.querySelector('#regUsername');
       if (regUsernameInput) {
         regUsernameInput.addEventListener('input', (e) => {
@@ -642,6 +836,7 @@ export const authViews = {
         });
       }
 
+      // ── Step 2 Inputs ──
       const regFirstInput = container.querySelector('#regFirstName');
       if (regFirstInput) {
         regFirstInput.addEventListener('input', (e) => {
@@ -671,6 +866,140 @@ export const authViews = {
           render();
         });
       });
+
+      // ── Step 3 Inputs ──
+      const regFarmNameInput = container.querySelector('#regFarmName');
+      if (regFarmNameInput) {
+        regFarmNameInput.addEventListener('input', (e) => {
+          formData.farmName = e.target.value;
+        });
+      }
+
+      const regFarmSizeHaInput = container.querySelector('#regFarmSizeHa');
+      if (regFarmSizeHaInput) {
+        regFarmSizeHaInput.addEventListener('input', (e) => {
+          formData.farmSizeHa = e.target.value;
+        });
+      }
+
+      const regRegionOrCountyInput = container.querySelector('#regRegionOrCounty');
+      if (regRegionOrCountyInput) {
+        regRegionOrCountyInput.addEventListener('change', (e) => {
+          formData.regionOrCounty = e.target.value;
+        });
+      }
+
+      const regPrimaryCropInput = container.querySelector('#regPrimaryCrop');
+      if (regPrimaryCropInput) {
+        regPrimaryCropInput.addEventListener('change', (e) => {
+          formData.primaryCrop = e.target.value;
+        });
+      }
+
+      const regSoilTypeInput = container.querySelector('#regSoilType');
+      if (regSoilTypeInput) {
+        regSoilTypeInput.addEventListener('change', (e) => {
+          formData.soilType = e.target.value;
+        });
+      }
+
+      const regIrrigationTypeInput = container.querySelector('#regIrrigationType');
+      if (regIrrigationTypeInput) {
+        regIrrigationTypeInput.addEventListener('change', (e) => {
+          formData.irrigationType = e.target.value;
+        });
+      }
+
+      const regFarmLatInput = container.querySelector('#regFarmLat');
+      if (regFarmLatInput) {
+        regFarmLatInput.addEventListener('input', (e) => {
+          formData.farmLatitude = e.target.value;
+        });
+      }
+
+      const regFarmLonInput = container.querySelector('#regFarmLon');
+      if (regFarmLonInput) {
+        regFarmLonInput.addEventListener('input', (e) => {
+          formData.farmLongitude = e.target.value;
+        });
+      }
+
+      const regOrgInput = container.querySelector('#regOrganization');
+      if (regOrgInput) {
+        regOrgInput.addEventListener('input', (e) => {
+          formData.organization = e.target.value;
+        });
+      }
+
+      const regSpecInput = container.querySelector('#regSpecialization');
+      if (regSpecInput) {
+        regSpecInput.addEventListener('change', (e) => {
+          formData.specialization = e.target.value;
+        });
+      }
+
+      const regFocusCropsInput = container.querySelector('#regFocusCrops');
+      if (regFocusCropsInput) {
+        regFocusCropsInput.addEventListener('input', (e) => {
+          formData.focusCrops = e.target.value;
+        });
+      }
+
+      const regStationInput = container.querySelector('#regStationOrOffice');
+      if (regStationInput) {
+        regStationInput.addEventListener('input', (e) => {
+          formData.stationOrOffice = e.target.value;
+        });
+      }
+
+      const regFarmerCapacityInput = container.querySelector('#regFarmerCapacity');
+      if (regFarmerCapacityInput) {
+        regFarmerCapacityInput.addEventListener('input', (e) => {
+          formData.farmerCapacity = e.target.value;
+        });
+      }
+
+      const regCompZoneInput = container.querySelector('#regComplianceZone');
+      if (regCompZoneInput) {
+        regCompZoneInput.addEventListener('input', (e) => {
+          formData.complianceZone = e.target.value;
+        });
+      }
+
+      const regGapInput = container.querySelector('#regGapCertificationFocus');
+      if (regGapInput) {
+        regGapInput.addEventListener('input', (e) => {
+          formData.gapCertificationFocus = e.target.value;
+        });
+      }
+
+      const regWeatherStationInput = container.querySelector('#regWeatherStationName');
+      if (regWeatherStationInput) {
+        regWeatherStationInput.addEventListener('input', (e) => {
+          formData.weatherStationName = e.target.value;
+        });
+      }
+
+      const regTelemetryInput = container.querySelector('#regTelemetryFocus');
+      if (regTelemetryInput) {
+        regTelemetryInput.addEventListener('input', (e) => {
+          formData.telemetryFocus = e.target.value;
+        });
+      }
+
+      const regAdminDeptInput = container.querySelector('#regAdminDepartment');
+      if (regAdminDeptInput) {
+        regAdminDeptInput.addEventListener('input', (e) => {
+          formData.adminDepartment = e.target.value;
+        });
+      }
+
+      const regSecurityInput = container.querySelector('#regSecurityClearance');
+      if (regSecurityInput) {
+        regSecurityInput.addEventListener('input', (e) => {
+          formData.securityClearance = e.target.value;
+        });
+      }
 
       // Navigation & Submission
       container.querySelector('#btnRegPrev')?.addEventListener('click', () => {
@@ -734,10 +1063,100 @@ export const authViews = {
           return;
         }
 
-        // Final Submission: Step 3
+        // Validation Step 3: Role-Specific Custom Inputs
         if (currentStep === 3) {
+          if (formData.role === 'farmer' || formData.role === 'farm_manager') {
+            if (regFarmNameInput) formData.farmName = regFarmNameInput.value.trim();
+            if (regFarmSizeHaInput) formData.farmSizeHa = regFarmSizeHaInput.value.trim();
+            if (regRegionOrCountyInput) formData.regionOrCounty = regRegionOrCountyInput.value;
+            if (regPrimaryCropInput) formData.primaryCrop = regPrimaryCropInput.value;
+            if (regSoilTypeInput) formData.soilType = regSoilTypeInput.value;
+            if (regIrrigationTypeInput) formData.irrigationType = regIrrigationTypeInput.value;
+            if (regFarmLatInput) formData.farmLatitude = regFarmLatInput.value.trim();
+            if (regFarmLonInput) formData.farmLongitude = regFarmLonInput.value.trim();
+
+            if (!formData.farmName) {
+              render('Please provide your Farm Name or Agricultural Holding.', 'critical');
+              return;
+            }
+          } else if (formData.role === 'agronomist') {
+            if (regOrgInput) formData.organization = regOrgInput.value.trim();
+            if (regSpecInput) formData.specialization = regSpecInput.value.trim();
+            if (regFocusCropsInput) formData.focusCrops = regFocusCropsInput.value.trim();
+
+            if (!formData.organization) {
+              render('Please enter your research organization or agronomic institution.', 'critical');
+              return;
+            }
+          } else if (formData.role === 'extension_officer') {
+            if (regStationInput) formData.stationOrOffice = regStationInput.value.trim();
+            if (regRegionOrCountyInput) formData.regionOrCounty = regRegionOrCountyInput.value;
+            if (regFarmerCapacityInput) formData.farmerCapacity = regFarmerCapacityInput.value.trim();
+
+            if (!formData.stationOrOffice) {
+              render('Please enter your assigned Extension District or Agritex Office.', 'critical');
+              return;
+            }
+          } else if (formData.role === 'field_officer') {
+            if (regCompZoneInput) formData.complianceZone = regCompZoneInput.value.trim();
+            if (regGapInput) formData.gapCertificationFocus = regGapInput.value.trim();
+
+            if (!formData.complianceZone) {
+              render('Please enter your assigned Field Inspection Zone.', 'critical');
+              return;
+            }
+          } else if (formData.role === 'weather_analyst') {
+            if (regWeatherStationInput) formData.weatherStationName = regWeatherStationInput.value.trim();
+            if (regTelemetryInput) formData.telemetryFocus = regTelemetryInput.value.trim();
+
+            if (!formData.weatherStationName) {
+              render('Please specify your Meteorological Station or Monitoring Unit.', 'critical');
+              return;
+            }
+          } else if (formData.role === 'system_admin' || formData.role === 'super_admin') {
+            if (regAdminDeptInput) formData.adminDepartment = regAdminDeptInput.value.trim();
+            if (regSecurityInput) formData.securityClearance = regSecurityInput.value.trim();
+
+            if (!formData.adminDepartment) {
+              render('Please enter your ministry department or institutional authority.', 'critical');
+              return;
+            }
+          }
+
+          currentStep = 4;
+          render();
+          return;
+        }
+
+        // Final Submission: Step 4
+        if (currentStep === 4) {
           isSubmitting = true;
           render();
+
+          // Prepare payload with customized fields according to role
+          const isFarmRole = formData.role === 'farmer' || formData.role === 'farm_manager';
+          const farmDetails = isFarmRole ? {
+            name: formData.farmName,
+            sizeHa: parseFloat(formData.farmSizeHa) || 5.0,
+            latitude: parseFloat(formData.farmLatitude) || -17.8252,
+            longitude: parseFloat(formData.farmLongitude) || 31.0335,
+            primaryCrop: formData.primaryCrop,
+            soilType: formData.soilType,
+            irrigationType: formData.irrigationType,
+            regionId: 'reg-001'
+          } : null;
+
+          const organization = formData.role === 'agronomist' 
+            ? formData.organization 
+            : (formData.role === 'system_admin' || formData.role === 'super_admin' ? formData.adminDepartment : '');
+
+          const specialization = formData.role === 'agronomist'
+            ? `${formData.specialization} (Focus: ${formData.focusCrops})`
+            : (formData.role === 'field_officer' ? formData.gapCertificationFocus : (formData.role === 'weather_analyst' ? formData.telemetryFocus : ''));
+
+          const stationOrOffice = formData.role === 'extension_officer'
+            ? `${formData.stationOrOffice} (Capacity: ${formData.farmerCapacity})`
+            : (formData.role === 'weather_analyst' ? formData.weatherStationName : (formData.role === 'field_officer' ? formData.complianceZone : ''));
 
           const result = await authService.register({
             username: formData.username,
@@ -746,7 +1165,12 @@ export const authViews = {
             firstName: formData.firstName,
             lastName: formData.lastName,
             phoneNumber: formData.phoneNumber,
-            role: formData.role
+            role: formData.role,
+            organization,
+            specialization,
+            regionOrCounty: formData.regionOrCounty,
+            stationOrOffice,
+            farmDetails
           });
 
           isSubmitting = false;
@@ -756,7 +1180,9 @@ export const authViews = {
             const requiresApproval = result.requiresApproval;
             const noticeMsg = requiresApproval
               ? `Registration successful! Your ${selectedRoleMeta.title} account is pending administrator approval before you can sign in.`
-              : `Registration successful! Please sign in with your password.`;
+              : (farmDetails 
+                  ? `Registration successful! Farm "${farmDetails.name}" registered and linked. Please sign in with your password.`
+                  : `Registration successful! Please sign in with your password.`);
 
             // Redirect user to the sign in form with prefilled username/email (and empty password)
             authViews.showLoginModal(null, {

@@ -60,121 +60,32 @@ export const authService = {
       } catch (e) {}
     }
 
-    const mockUsers = {
-      super_admin: { 
-        id: 'usr-00', 
-        username: 'superadmin', 
-        firstName: 'Chief', 
-        lastName: 'Agrotechnologist', 
-        email: 'chief@ayis.org', 
-        phone: '+254 700 000 001',
-        role: 'super_admin',
-        organization: 'Ministry of Agriculture / National Agritech Council',
-        bio: 'Lead agricultural intelligence architect and national governance officer.',
-        avatar: '🌱',
-        notifications: { email: true, sms: true, weatherAlerts: true, advisoryUpdates: true },
-        twoFactorEnabled: true
-      },
-      system_admin: { 
-        id: 'usr-01', 
-        username: 'alexk', 
-        firstName: 'Alex', 
-        lastName: 'Kipruto', 
-        email: 'alex.kipruto@ayis.org', 
-        phone: '+254 700 000 002',
-        role: 'system_admin',
-        organization: 'AYIS Infrastructure Team',
-        bio: 'Security operations and spatial database systems administrator.',
-        avatar: '🔐',
-        notifications: { email: true, sms: false, weatherAlerts: false, advisoryUpdates: true },
-        twoFactorEnabled: true
-      },
-      agronomist: { 
-        id: 'usr-02', 
-        username: 'sarahm', 
-        firstName: 'Dr. Sarah', 
-        lastName: 'Mwangi', 
-        email: 'sarah.mwangi@ayis.org', 
-        phone: '+254 700 000 003',
-        role: 'agronomist',
-        organization: 'Department of Research & Specialist Services (DR&SS Zimbabwe)',
-        bio: 'Senior agronomist focusing on crop phenology and hydrothermal suitability.',
-        avatar: '🌾',
-        notifications: { email: true, sms: true, weatherAlerts: true, advisoryUpdates: true },
-        twoFactorEnabled: false
-      },
-      extension_officer: { 
-        id: 'usr-03', 
-        username: 'gracew', 
-        firstName: 'Grace', 
-        lastName: 'Wanjiku', 
-        email: 'grace.wanjiku@ayis.org', 
-        phone: '+254 700 000 004',
-        role: 'extension_officer',
-        organization: 'AGRITEX Mashonaland Agricultural Extension Service',
-        bio: 'Field extension specialist supporting 120+ smallholder maize & legume farms.',
-        avatar: '👥',
-        notifications: { email: true, sms: true, weatherAlerts: true, advisoryUpdates: true },
-        twoFactorEnabled: false
-      },
-      weather_analyst: { 
-        id: 'usr-04', 
-        username: 'danielk', 
-        firstName: 'Daniel', 
-        lastName: 'Kiprop', 
-        email: 'daniel.kiprop@ayis.org', 
-        phone: '+254 700 000 005',
-        role: 'weather_analyst',
-        organization: 'Zimbabwe Meteorological Services Department (MSD)',
-        bio: 'Meteorologist analyzing automated weather station networks and GDD.',
-        avatar: '📡',
-        notifications: { email: true, sms: false, weatherAlerts: true, advisoryUpdates: false },
-        twoFactorEnabled: false
-      },
-      farm_manager: { 
-        id: 'usr-05', 
-        username: 'davidm', 
-        firstName: 'David', 
-        lastName: 'Mwangi', 
-        email: 'david.mwangi@estate.ke', 
-        phone: '+254 700 000 006',
-        role: 'farm_manager',
-        organization: 'Green Valley Commercial Holdings',
-        bio: 'Managing 2 commercial farms across 20.7 hectares of commercial maize and beans.',
-        avatar: '📋',
-        notifications: { email: true, sms: true, weatherAlerts: true, advisoryUpdates: true },
-        twoFactorEnabled: false
-      },
-      farmer: { 
-        id: 'usr-06', 
-        username: 'johnk', 
-        firstName: 'John', 
-        lastName: 'Kamau', 
-        email: 'john.kamau@farms.ke', 
-        phone: '+254 712 345 678',
-        role: 'farmer',
-        organization: 'Green Valley Model Farm',
-        bio: 'Smallholder maize and bean farmer in Nakuru High Plains.',
-        avatar: '🚜',
-        notifications: { email: false, sms: true, weatherAlerts: true, advisoryUpdates: true },
-        twoFactorEnabled: false
-      },
-      field_officer: { 
-        id: 'usr-07', 
-        username: 'peterk', 
-        firstName: 'Peter', 
-        lastName: 'Koech', 
-        email: 'peter.koech@ayis.org', 
-        phone: '+254 700 000 007',
-        role: 'field_officer',
-        organization: 'Regional Crop Protection Unit',
-        bio: 'Inspections officer conducting GAP compliance and pest scouting audits.',
-        avatar: '🔍',
-        notifications: { email: true, sms: true, weatherAlerts: true, advisoryUpdates: true },
-        twoFactorEnabled: false
-      }
+    const roleMeta = {
+      super_admin: { title: 'Super Administrator', avatar: '🏛️', org: 'Executive Governance' },
+      system_admin: { title: 'System Administrator', avatar: '🔐', org: 'Infrastructure Operations' },
+      agronomist: { title: 'Agronomist', avatar: '🌾', org: 'Crop Science & Research' },
+      extension_officer: { title: 'Extension Officer', avatar: '👥', org: 'Field Outreach' },
+      weather_analyst: { title: 'Weather Analyst', avatar: '📡', org: 'Meteorological Intelligence' },
+      farm_manager: { title: 'Farm Manager', avatar: '📋', org: 'Agricultural Operations' },
+      farmer: { title: 'Farmer', avatar: '🚜', org: 'Agricultural Producer' },
+      field_officer: { title: 'Field Officer', avatar: '🔍', org: 'Field Inspection Unit' }
     };
-    return mockUsers[role] || mockUsers.super_admin;
+
+    const meta = roleMeta[role] || roleMeta.farmer;
+    return {
+      id: '',
+      username: '',
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      role: role,
+      organization: meta.org,
+      bio: '',
+      avatar: meta.avatar,
+      notifications: { email: true, sms: true, weatherAlerts: true, advisoryUpdates: true },
+      twoFactorEnabled: false
+    };
   },
 
   async updateUserProfile(updatedProfile) {
@@ -183,29 +94,6 @@ export const authService = {
     localStorage.setItem('ayis_user_profile_' + role, JSON.stringify(updatedProfile));
     localStorage.setItem('ayis_profile_completed', 'true');
     return { success: true, user: updatedProfile };
-  },
-
-  /**
-   * Fetch preconfigured demo personas directly from the backend database
-   */
-  async getDemoUsers() {
-    try {
-      const data = await api.request('/auth/demo-users');
-      if (Array.isArray(data)) {
-        return data.map(u => ({
-          id: u.id ?? u.Id,
-          username: u.username ?? u.Username,
-          role: u.role ?? u.Role,
-          firstName: u.firstName ?? u.FirstName ?? '',
-          lastName: u.lastName ?? u.LastName ?? '',
-          email: u.email ?? u.Email ?? ''
-        }));
-      }
-      return [];
-    } catch (e) {
-      console.warn('[authService] Unable to fetch demo users from backend DB API:', e);
-      return [];
-    }
   },
 
   async login({ emailOrUsername, password, rememberMe = true }) {
@@ -282,7 +170,13 @@ export const authService = {
   /**
    * Register a new user into the platform database
    */
-  async register({ username, email, password, firstName = '', lastName = '', phoneNumber = '', role = 'farmer' }) {
+  async register(registrationPayload) {
+    const {
+      username, email, password, firstName = '', lastName = '', phoneNumber = '', role = 'farmer',
+      organization = '', specialization = '', regionOrCounty = '', stationOrOffice = '',
+      farmDetails = null
+    } = registrationPayload;
+
     const cleanUsername = (username || '').trim();
     const cleanEmail = (email || '').trim().toLowerCase();
 
@@ -304,7 +198,23 @@ export const authService = {
           FirstName: (firstName || '').trim(),
           LastName: (lastName || '').trim(),
           PhoneNumber: (phoneNumber || '').trim(),
-          Role: role
+          Role: role,
+          Organization: organization,
+          Specialization: specialization,
+          RegionOrCounty: regionOrCounty,
+          StationOrOffice: stationOrOffice,
+          FarmDetails: farmDetails ? {
+            Name: farmDetails.name,
+            SizeHa: parseFloat(farmDetails.sizeHa) || 5.0,
+            Latitude: parseFloat(farmDetails.latitude) || -19.0154,
+            Longitude: parseFloat(farmDetails.longitude) || 29.1549,
+            BoundaryWkt: farmDetails.boundaryWkt,
+            PrimaryCrop: farmDetails.primaryCrop || 'Maize',
+            SoilType: farmDetails.soilType || 'Sandy Clay Loam (pH 6.2)',
+            IrrigationType: farmDetails.irrigationType || 'Rainfed',
+            ElevationM: parseFloat(farmDetails.elevationM) || 1400,
+            RegionId: farmDetails.regionId || 'reg-001'
+          } : null
         })
       });
 
@@ -312,7 +222,8 @@ export const authService = {
         success: true,
         requiresApproval: !!res.requires_approval,
         message: res.message || 'Registration successful!',
-        user: res.user
+        user: res.user,
+        farm: res.farm
       };
     } catch (err) {
       if (err.name === 'ApiError') {

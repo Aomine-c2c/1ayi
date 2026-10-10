@@ -319,7 +319,31 @@ public class RegisterRequest
     public string? LastName { get; set; }
     public string? PhoneNumber { get; set; }
     public string? Role { get; set; }
+
+    // Role-specific professional attributes
+    public string? Organization { get; set; }
+    public string? Specialization { get; set; }
+    public string? RegionOrCounty { get; set; }
+    public string? StationOrOffice { get; set; }
+
+    // Farm creation details (for Farmer / Farm Manager)
+    public RegisterFarmRequest? FarmDetails { get; set; }
 }
+
+public class RegisterFarmRequest
+{
+    public string? Name { get; set; }
+    public decimal? SizeHa { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+    public string? BoundaryWkt { get; set; }
+    public string? PrimaryCrop { get; set; }
+    public string? SoilType { get; set; }
+    public string? IrrigationType { get; set; }
+    public decimal? ElevationM { get; set; }
+    public string? RegionId { get; set; }
+}
+
 
 
 

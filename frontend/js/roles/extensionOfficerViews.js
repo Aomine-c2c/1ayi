@@ -90,14 +90,14 @@ export const extensionOfficerViews = {
           <div>
             <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px;">
               <span class="badge badge-green" style="font-size: 0.75rem; font-weight: 800;">AGRICULTURAL EXTENSION SERVICE</span>
-              <span style="font-size: 0.8rem; color: var(--primary-dark); font-weight: 700;">🟢 Assigned Zone: Rift Valley Sub-zone 4</span>
+              <span style="font-size: 0.8rem; color: var(--primary-dark); font-weight: 700;">🟢 Assigned Office: ${user.stationOrOffice || 'Regional Agritex Extension Office'}</span>
             </div>
             <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--text-primary); letter-spacing: -0.5px; margin: 0 0 6px 0;">
-              Field Extension Command: ${user.firstName || 'Grace Wanjiku'}
+              Field Extension Command: ${user.firstName ? `${user.firstName} ${user.lastName}` : (user.username || 'Extension Officer')}
             </h1>
             <p style="color: var(--text-secondary); margin: 0; font-size: 0.92rem; max-width: 720px;">
-              Directly supporting <strong>${farmers.length} registered producers</strong> across <strong>${farms.length} agricultural estates</strong>. 
-              Currently managing <strong>${pendingFollowUps.length} outstanding follow-ups</strong> and <strong>${highRiskFarms.length} holdings requiring technical intervention</strong>.
+              Directly supporting registered producers across <strong>${farms.length} agricultural holdings</strong> in ${user.regionOrCounty || 'Assigned Extension Sub-zone'}. 
+              Managing <strong>${pendingFollowUps.length} outstanding follow-ups</strong> and technical interventions.
             </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">

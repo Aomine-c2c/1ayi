@@ -73,13 +73,13 @@ export const weatherAnalystViews = {
           <div>
             <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 8px;">
               <span class="badge badge-green" style="font-weight: 800;">AGROMETEOROLOGY & DATA INTEGRITY COMMAND</span>
-              <span style="font-size: 0.8rem; color: var(--primary-dark); font-weight: 700;">🟢 Telemetry Pipeline Active</span>
+              <span style="font-size: 0.8rem; color: var(--primary-dark); font-weight: 700;">🟢 Station: ${user.stationOrOffice || 'National Synoptic Telemetry'}</span>
             </div>
             <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--text-primary); margin: 0 0 6px 0; letter-spacing: -0.5px;">
-              Synoptic Agromet Overview: Daniel Kiprop
+              Synoptic Agromet Overview: ${user.firstName ? `${user.firstName} ${user.lastName}` : (user.username || 'Meteorological Analyst')}
             </h1>
             <p style="color: var(--text-secondary); margin: 0; font-size: 0.92rem; max-width: 760px;">
-              Monitoring real-time meteorological observations across <strong>${stations.length} regional telemetry stations</strong>.
+              Focus: <strong>${user.specialization || 'AWS Telemetry & Drought Indices'}</strong>. Monitoring real-time meteorological observations across <strong>${stations.length} regional telemetry stations</strong>.
               Overall network completeness stands at <strong>${avgQuality}%</strong> with <strong>${activeAlerts} active severe weather advisories</strong> in effect.
             </p>
           </div>

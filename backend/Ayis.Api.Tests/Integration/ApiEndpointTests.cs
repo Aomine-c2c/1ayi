@@ -70,18 +70,6 @@ public class ApiEndpointTests : IClassFixture<AyisApiFactory>
     }
 
     [Fact]
-    public async Task GetDemoUsers_Returns200_WithDatabaseSeededUsers()
-    {
-        var response = await _client.GetAsync("/api/v1/auth/demo-users");
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var content = await response.Content.ReadAsStringAsync();
-        content.Should().Contain("admin");
-        content.Should().Contain("johnk");
-        content.Should().Contain("sarahm");
-    }
-
-    [Fact]
     public async Task CropsEndpoint_WithoutToken_Returns401()
     {
         var response = await _client.GetAsync("/api/v1/crops");
@@ -349,17 +337,115 @@ public class ApiEndpointTests : IClassFixture<AyisApiFactory>
     [Fact]
     public async Task Register_DuplicateUsername_ReturnsConflict()
     {
-        var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest
+        var uniqueSuffix = Guid.NewGuid().ToString()[..6];
+        var username = $"duptest_{uniqueSuffix}";
+        var email1 = $"dup1_{uniqueSuffix}@farms.ke";
+        var email2 = $"dup2_{uniqueSuffix}@farms.ke";
+
+        // Register initial user
+        var initial = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest
         {
-            Username = "johnk", // Already seeded in SQLite
-            Email = "new_unique_email@farms.ke",
+            Username = username,
+            Email = email1,
+            Password = "Password123!",
+            Role = "farmer"
+        });
+        initial.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // Attempt to register with identical username
+        var duplicateResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest
+        {
+            Username = username,
+            Email = email2,
             Password = "Password123!",
             Role = "farmer"
         });
 
-        registerResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        var body = await registerResponse.Content.ReadAsStringAsync();
+        duplicateResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var body = await duplicateResponse.Content.ReadAsStringAsync();
         body.Should().Contain("Username is already taken");
+    }
+
+    [Fact]
+    public async Task Register_FarmerWithFarmDetails_CreatesAndLinksFarm()
+    {
+        var uniqueSuffix = Guid.NewGuid().ToString()[..6];
+        var username = $"farmer_estate_{uniqueSuffix}";
+        var email = $"estate_{uniqueSuffix}@greenvalley.co.zw";
+        var password = "EstatePass123!";
+        var farmName = $"Green Valley #{uniqueSuffix}";
+
+        var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest
+        {
+            Username = username,
+            Email = email,
+            Password = password,
+            FirstName = "Kudakwashe",
+            LastName = "Shumba",
+            Role = "farmer",
+            RegionOrCounty = "Mashonaland Central",
+            FarmDetails = new RegisterFarmRequest
+            {
+                Name = farmName,
+                SizeHa = 25.5m,
+                Latitude = -17.5123,
+                Longitude = 31.2541,
+                PrimaryCrop = "Maize (SC719)",
+                SoilType = "Red Clay Loam (Fersiallitic)",
+                IrrigationType = "Center Pivot",
+                RegionId = "reg-001"
+            }
+        });
+
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var regDoc = await registerResponse.Content.ReadFromJsonAsync<JsonElement>();
+        regDoc.GetProperty("farm").Should().NotBeNull();
+        regDoc.GetProperty("farm").GetProperty("name").GetString().Should().Be(farmName);
+        var farmOwnerId = regDoc.GetProperty("farm").GetProperty("owner_id").GetString();
+        var userId = regDoc.GetProperty("user").GetProperty("id").GetString();
+        farmOwnerId.Should().Be(userId);
+
+        // Verify farm is queryable via GET /api/v1/farms with generated token
+        var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/token", new LoginRequest(username, password));
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var loginDoc = await loginResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var token = loginDoc.GetProperty("access_token").GetString();
+
+        var farmsRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/farms");
+        farmsRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var farmsResponse = await _client.SendAsync(farmsRequest);
+        farmsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var farmsList = await farmsResponse.Content.ReadFromJsonAsync<List<Farm>>(JsonOpts);
+        farmsList.Should().Contain(f => f.Name == farmName && f.OwnerId == userId);
+    }
+
+    [Fact]
+    public async Task Register_Agronomist_SavesSpecializationAndAllowsImmediateLogin()
+    {
+        var uniqueSuffix = Guid.NewGuid().ToString()[..6];
+        var username = $"agronomist_{uniqueSuffix}";
+        var email = $"agro_{uniqueSuffix}@drss.res.zw";
+        var password = "SpecialistPass123!";
+
+        var registerResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", new RegisterRequest
+        {
+            Username = username,
+            Email = email,
+            Password = password,
+            FirstName = "Ruvimbo",
+            LastName = "Chikwava",
+            Role = "agronomist",
+            Organization = "DR&SS Research Division",
+            Specialization = "Plant Pathology & Integrated Pest Management (IPM)",
+            RegionOrCounty = "Manicaland"
+        });
+
+        registerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/token", new LoginRequest(username, password));
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var loginDoc = await loginResponse.Content.ReadFromJsonAsync<JsonElement>();
+        loginDoc.GetProperty("user").GetProperty("role").GetString().Should().Be("agronomist");
     }
 }
 

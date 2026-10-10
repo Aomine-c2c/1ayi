@@ -36,13 +36,13 @@ export const fieldOfficerViews = {
           <div>
             <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 6px;">
               <span class="badge badge-green" style="font-size: 0.75rem;">PHYSICAL FIELD MONITORING</span>
-              <span style="font-size: 0.8rem; color: var(--primary-dark); font-weight: 700;">📡 Nakuru Sub-zone 4 In-Field Unit</span>
+              <span style="font-size: 0.8rem; color: var(--primary-dark); font-weight: 700;">📡 Assigned Zone: ${user.stationOrOffice || 'Field Inspection Unit'}</span>
             </div>
             <h1 style="font-size: 1.6rem; font-weight: 900; color: var(--text-primary); letter-spacing: -0.5px;">
               Field Officer Dispatch & Scouting Command
             </h1>
             <p style="color: var(--text-secondary); margin-top: 4px; font-size: 0.875rem;">
-              Officer: <strong>Peter Koech</strong> · Active physical scouting, crop phenology observations, and action compliance
+              Officer: <strong>${user.firstName ? `${user.firstName} ${user.lastName}` : (user.username || 'Field Compliance Officer')}</strong> · Standards: <strong>${user.specialization || 'GAP Audits & Pest Scouting'}</strong>
             </p>
           </div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">

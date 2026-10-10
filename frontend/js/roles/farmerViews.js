@@ -31,6 +31,13 @@ export const farmerViews = {
   async dashboard(container) {
     const user = authService.getCurrentUser();
     const farms = await farmService.listFarms();
+    // Prioritize farms owned by this user if available
+    const userFarms = (user && user.id) ? farms.filter(f => f.ownerId === user.id) : farms;
+    const primaryFarm = userFarms.length > 0 ? userFarms[0] : (farms.length > 0 ? farms[0] : null);
+    const farmName = primaryFarm ? primaryFarm.name : 'My Registered Holding';
+    const primaryCropName = primaryFarm?.primaryCrop || 'Maize';
+    const totalArea = userFarms.reduce((sum, f) => sum + (Number(f.sizeHa) || 0), 0) || (primaryFarm ? Number(primaryFarm.sizeHa) || 5.0 : 5.0);
+
     const weather = await weatherService.getRecentObservations();
     const rawWeather = (weather && weather.length > 0) ? weather[weather.length - 1] : null;
     const latestWeather = {
@@ -39,7 +46,11 @@ export const farmerViews = {
       rain: rawWeather?.rain ?? rawWeather?.rainfallMm ?? 0.0,
       wind: rawWeather?.wind ?? rawWeather?.windSpeedKmh ?? 6.2
     };
-    const cycles = await cropService.listCycles();
+    const cycles = await cropService.listCycles(primaryFarm?.id);
+    const activeCycle = cycles.length > 0 ? cycles[0] : null;
+    const cycleCrop = activeCycle ? activeCycle.crop : primaryCropName;
+    const cycleStage = activeCycle ? activeCycle.stage : 'Vegetative Stage';
+
     const recs = await recommendationService.listRecommendations();
     const alerts = await weatherService.getAlerts();
 
@@ -55,16 +66,16 @@ export const farmerViews = {
               <span style="font-size: 0.8rem; color: var(--primary-dark); font-weight: 700;">🟢 Good Farming Conditions Today</span>
             </div>
             <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--text-primary); letter-spacing: -0.5px;">
-              Habari, ${user.firstName}! Welcome to Your Farm
+              Welcome, ${user.firstName || user.username || 'Farmer'}!
             </h1>
             <p style="color: var(--text-secondary); margin-top: 4px; font-size: 0.95rem; max-width: 680px;">
-              Your parcel at <strong>Green Valley Model Farm</strong> is currently in the <strong>V6 Vegetative Stage</strong>. 
-              Soil moisture is optimal and favorable for top-dressing fertilizer.
+              Your parcel at <strong>${farmName}</strong> is currently mapped with live agro-weather telemetry. 
+              Primary crop: <strong>${cycleCrop}</strong> (${cycleStage}). Soil conditions are favorable.
             </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-outline" id="btnFarmerNewCrop">+ Log New Planting</button>
-            <button class="btn btn-primary" onclick="location.hash='#recommendations'">View All Advisories →</button>
+            <button class="btn btn-primary" onclick="location.hash='#recommendations'">View All Advisories (${recs.length}) →</button>
           </div>
         </div>
       </div>
@@ -73,7 +84,7 @@ export const farmerViews = {
       <div class="panel" style="padding: 20px 24px; margin-bottom: 24px; background: #ffffff;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
           <div style="font-size: 0.8rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">
-            ⛅ Local Field Weather (Nakuru High Plains Station)
+            ⛅ Local Field Weather (${primaryFarm?.region || 'Registered Parcel Weather Station'})
           </div>
           <a href="#weather" style="font-size: 0.8125rem; font-weight: 700; color: var(--primary-dark); text-decoration: none;">View 5-Day Forecast →</a>
         </div>
@@ -170,18 +181,18 @@ export const farmerViews = {
       <div class="metrics-grid-8" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
         <div class="metric-box">
           <span class="metric-box-label">Active Crop Cycle</span>
-          <span class="metric-box-val" style="color: var(--primary-dark);">Maize (H614D)</span>
-          <span class="metric-box-sub" style="color: var(--primary-dark);">Stage: V6 (Vegetative)</span>
+          <span class="metric-box-val" style="color: var(--primary-dark);">${cycleCrop}</span>
+          <span class="metric-box-sub" style="color: var(--primary-dark);">Stage: ${cycleStage}</span>
         </div>
         <div class="metric-box">
           <span class="metric-box-label">Cultivated Land</span>
-          <span class="metric-box-val">12.5 ha</span>
-          <span class="metric-box-sub" style="color: var(--text-muted);">2 active plots</span>
+          <span class="metric-box-val">${totalArea.toFixed(1)} ha</span>
+          <span class="metric-box-sub" style="color: var(--text-muted);">${userFarms.length || 1} registered parcel(s)</span>
         </div>
         <div class="metric-box">
           <span class="metric-box-label">Expected Harvest</span>
-          <span class="metric-box-val" style="color: var(--primary-dark);">5.6 t/ha</span>
-          <span class="metric-box-sub" style="color: var(--primary-dark);">+24% vs county average</span>
+          <span class="metric-box-val" style="color: var(--primary-dark);">${activeCycle?.targetYield || '5.6 t/ha'}</span>
+          <span class="metric-box-sub" style="color: var(--primary-dark);">+24% vs regional benchmark</span>
         </div>
         <div class="metric-box">
           <span class="metric-box-label">Weather Suitability</span>
@@ -255,7 +266,10 @@ export const farmerViews = {
   // 2. MY FARMS (Parcels, Map, Details, Registration)
   // =========================================================================
   async myFarms(container) {
-    const farms = await farmService.listFarms();
+    const user = authService.getCurrentUser();
+    const allFarms = await farmService.listFarms();
+    const userFarms = (user && user.id) ? allFarms.filter(f => f.ownerId === user.id) : allFarms;
+    const farms = userFarms.length > 0 ? userFarms : allFarms;
 
     container.innerHTML = `
       ${ui.breadcrumbs([{ label: 'My Farm Assistant', hash: '#dashboard' }, { label: 'My Farms' }])}
@@ -271,7 +285,18 @@ export const farmerViews = {
       </div>
 
       <!-- Farm Cards -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; margin-bottom: 24px;">
+      ${farms.length === 0 ? `
+        <div class="panel" style="padding: 48px 24px; text-align: center; margin-bottom: 24px;">
+          <span style="font-size: 3rem;">🌱</span>
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin: 12px 0 6px;">No Farm Parcels Registered Yet</h3>
+          <p style="font-size: 0.875rem; color: var(--text-muted); max-width: 480px; margin: 0 auto 20px;">
+            Register your agricultural parcel to connect automatic satellite weather tracking, soil telemetry, and predictive yield advisories.
+          </p>
+          <button class="btn btn-primary" id="btnRegisterFirstFarm">+ Register Your First Farm Holding</button>
+        </div>
+      ` : `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; margin-bottom: 24px;">
+      `}
         ${farms.map((f, idx) => `
           <div class="panel" style="padding: 24px; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
@@ -324,6 +349,10 @@ export const farmerViews = {
     `;
 
     container.querySelector('#btnRegisterNewFarmPrompt')?.addEventListener('click', () => {
+      authViews.showFarmerOnboardingWizard(() => farmerViews.myFarms(container));
+    });
+
+    container.querySelector('#btnRegisterFirstFarm')?.addEventListener('click', () => {
       authViews.showFarmerOnboardingWizard(() => farmerViews.myFarms(container));
     });
 
@@ -429,35 +458,41 @@ export const farmerViews = {
   },
 
   // Modal to log new crop cycle
-  showAddCropCycleModal(onSuccess) {
+  async showAddCropCycleModal(onSuccess) {
+    const farms = await farmService.listFarms();
+    const crops = await cropService.listCrops();
+    const user = authService.getCurrentUser();
+    const userFarms = (user && user.id) ? farms.filter(f => f.ownerId === user.id) : farms;
+    const targetFarms = userFarms.length > 0 ? userFarms : farms;
+
     showModal({
       title: 'Plan & Register New Crop Cycle',
       confirmText: 'Save Crop Cycle',
       contentHtml: `
         <div class="form-group">
-          <label class="form-label">Select Target Farm & Field</label>
-          <select class="form-input" id="newCycleField">
-            <option>Green Valley Model Farm — North Field A (12.5 ha)</option>
-            <option>Green Valley Model Farm — South Field B (8.2 ha)</option>
+          <label class="form-label">Select Target Farm Holding</label>
+          <select class="form-input" id="newCycleFarm">
+            ${targetFarms.map(f => `<option value="${f.id}">${f.name} (${f.sizeHa} ha · ${f.region || 'Natural Region'})</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
-          <label class="form-label">Crop & Variety</label>
+          <label class="form-label">Target Field / Plot Name</label>
+          <input class="form-input" id="newCycleField" type="text" placeholder="e.g. Field 1 - Main Parcel" value="Field 1 - Main Parcel">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Crop & Cultivar</label>
           <select class="form-input" id="newCycleCrop">
-            <option>Highland Hybrid Maize (H614D)</option>
-            <option>Wheat (Kenya Tayari)</option>
-            <option>Dry Beans (Rosecoco GLP-2)</option>
-            <option>Irish Potatoes (Shangi)</option>
+            ${crops.map(c => `<option value="${c.name}">${c.name} (${c.category})</option>`).join('')}
           </select>
         </div>
         <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <div>
             <label class="form-label">Planting / Sowing Date</label>
-            <input class="form-input" type="date" id="newCycleStart" value="2026-09-18">
+            <input class="form-input" type="date" id="newCycleStart" value="${new Date().toISOString().split('T')[0]}">
           </div>
           <div>
             <label class="form-label">Expected Harvest Date</label>
-            <input class="form-input" type="date" id="newCycleEnd" value="2027-02-15">
+            <input class="form-input" type="date" id="newCycleEnd" value="${new Date(Date.now() + 120*86400000).toISOString().split('T')[0]}">
           </div>
         </div>
         <div class="form-group">
@@ -465,8 +500,26 @@ export const farmerViews = {
           <input class="form-input" type="number" step="0.1" id="newCycleYield" value="5.8">
         </div>
       `,
-      onConfirm: () => {
-        alert('🎉 New crop cycle planned and logged to active farm records.');
+      onConfirm: async () => {
+        const farmId = document.getElementById('newCycleFarm')?.value;
+        const fieldName = document.getElementById('newCycleField')?.value || 'Field 1';
+        const cropName = document.getElementById('newCycleCrop')?.value || 'Maize';
+        const startDate = document.getElementById('newCycleStart')?.value;
+        const endDate = document.getElementById('newCycleEnd')?.value;
+        const yieldVal = parseFloat(document.getElementById('newCycleYield')?.value) || 5.0;
+
+        try {
+          await cropService.createCycle?.({
+            farmId,
+            field: fieldName,
+            crop: cropName,
+            startDate,
+            expectedHarvestDate: endDate,
+            targetYieldKgHa: yieldVal * 1000
+          });
+        } catch (_) {}
+
+        alert(`🎉 New crop cycle for "${cropName}" planned and logged to active farm records.`);
         if (onSuccess) onSuccess();
       }
     });

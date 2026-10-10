@@ -142,8 +142,24 @@ public class EdgeCaseAndValidationTests : IClassFixture<AyisApiFactory>
     [Fact]
     public async Task ChangePassword_ShortNewPassword_Returns400BadRequest()
     {
-        var token = GenerateValidJwt(role: "admin", userId: "u-002");
-        var request = new HttpRequestMessage(HttpMethod.Patch, "/api/v1/users/u-002/password")
+        var testUserId = $"u-pwd-{Guid.NewGuid().ToString()[..6]}";
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var userRepo = scope.ServiceProvider.GetRequiredService<Ayis.Api.Repositories.UserRepository>();
+            var authService = scope.ServiceProvider.GetRequiredService<AuthService>();
+            await userRepo.CreateAsync(new User
+            {
+                Id = testUserId,
+                Username = $"user_{testUserId}",
+                Email = $"{testUserId}@ayis.org",
+                PasswordHash = authService.HashPassword("Password123!"),
+                Role = "admin",
+                IsActive = true
+            });
+        }
+
+        var token = GenerateValidJwt(role: "admin", userId: testUserId);
+        var request = new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/users/{testUserId}/password")
         {
             Content = JsonContent.Create(new { CurrentPassword = "Password123!", NewPassword = "short" })
         };

@@ -79,11 +79,11 @@ export const systemAdminViews = {
               <span style="font-size: 0.8rem; color: var(--primary-dark); font-weight: 700;">🟢 Core Services Operational</span>
             </div>
             <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--text-primary); margin: 0 0 6px 0; letter-spacing: -0.5px;">
-              System Administration: Alex Kipruto
+              System Administration: ${user.firstName ? `${user.firstName} ${user.lastName}` : (user.username || 'System Administrator')}
             </h1>
             <p style="color: var(--text-secondary); margin: 0; font-size: 0.92rem; max-width: 760px;">
-              Overseeing platform infrastructure, user provisioning, role-based access control (RBAC),
-              telemetry ingest pipelines, and audit trails for the Agricultural Yield Production Monitoring System.
+              Department: <strong>${user.organization || 'Ministry Agricultural IT & Systems'}</strong>. Overseeing platform infrastructure, user provisioning, role-based access control (RBAC),
+              telemetry ingest pipelines, and audit trails for the Agricultural Yield Intelligence Platform.
             </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">

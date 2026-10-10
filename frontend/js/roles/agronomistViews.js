@@ -119,11 +119,11 @@ export const agronomistViews = {
               <span style="font-size: 0.8rem; color: var(--primary-dark); font-weight: 700;">🟢 Phenology Engine Synced</span>
             </div>
             <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--text-primary); letter-spacing: -0.5px; margin: 0 0 6px 0;">
-              Agronomic Command: ${user.firstName || 'Dr. Sarah'}
+              Agronomic Command: ${user.firstName ? `${user.firstName} ${user.lastName}` : (user.username || 'Specialist')}
             </h1>
             <p style="color: var(--text-secondary); margin: 0; font-size: 0.92rem; max-width: 720px;">
-              Supervising <strong>${farms.length} commercial farms (${totalArea.toFixed(1)} ha)</strong> in the Nakuru High Plains agro-ecological zone. 
-              Currently tracking <strong>${activeCycles.length} active crop cycles</strong> with predictive yield models running at <strong>89.2% mean confidence</strong>.
+              Affiliated with <strong>${user.organization || 'Agricultural Research Division'}</strong> · Specialization: <strong>${user.specialization || 'Crop Phenology & Soil Fertility'}</strong>.
+              Supervising <strong>${farms.length} agricultural holdings (${totalArea.toFixed(1)} ha)</strong>. Tracking <strong>${activeCycles.length} active crop cycles</strong> with predictive yield models.
             </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">

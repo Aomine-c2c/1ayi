@@ -50,7 +50,7 @@ public static class AuthEndpoints
         }).WithName("Login").WithTags("Auth").AllowAnonymous();
 
         // POST /api/v1/auth/register — Public Registration
-        app.MapPost("/api/v1/auth/register", async (RegisterRequest req, UserRepository userRepo, AuthService authService) =>
+        app.MapPost("/api/v1/auth/register", async (RegisterRequest req, UserRepository userRepo, FarmRepository farmRepo, AuthService authService) =>
         {
             if (string.IsNullOrWhiteSpace(req.Username) || string.IsNullOrWhiteSpace(req.Email))
                 return Results.BadRequest(new { message = "Username and email address are required." });
@@ -103,11 +103,39 @@ public static class AuthEndpoints
             if (!created)
                 return Results.Problem("Failed to create user account. Please try again.");
 
+            // If a farm was registered (e.g. by farmer or farm manager), create the farm record linked to this user
+            Farm? registeredFarm = null;
+            if (req.FarmDetails != null && !string.IsNullOrWhiteSpace(req.FarmDetails.Name))
+            {
+                var farmName = req.FarmDetails.Name.Trim();
+                registeredFarm = new Farm
+                {
+                    Id             = $"farm-{Guid.NewGuid().ToString()[..8]}",
+                    Name           = farmName,
+                    OwnerId        = newUser.Id,
+                    RegionId       = req.FarmDetails.RegionId ?? "reg-001",
+                    SizeHa         = req.FarmDetails.SizeHa ?? 5.0m,
+                    Latitude       = req.FarmDetails.Latitude ?? -19.0154,
+                    Longitude      = req.FarmDetails.Longitude ?? 29.1549,
+                    BoundaryWkt    = req.FarmDetails.BoundaryWkt ?? $"POLYGON((29.1500 -19.0100, 29.1600 -19.0100, 29.1600 -19.0200, 29.1500 -19.0200, 29.1500 -19.0100))",
+                    PrimaryCrop    = req.FarmDetails.PrimaryCrop ?? "Maize",
+                    SoilType       = req.FarmDetails.SoilType ?? "Sandy Clay Loam (pH 6.2)",
+                    IrrigationType = req.FarmDetails.IrrigationType ?? "Rainfed",
+                    ElevationM     = req.FarmDetails.ElevationM ?? 1400m,
+                    IsActive       = true,
+                    CreatedAt      = DateTime.UtcNow
+                };
+
+                await farmRepo.CreateAsync(registeredFarm);
+            }
+
             return Results.Created($"/api/v1/users/{newUser.Id}", new
             {
                 message = requiresApproval
                     ? "Registration successful! Your administrative account requires administrator approval before you can sign in."
-                    : "Registration successful! You can now sign in with your credentials.",
+                    : (registeredFarm != null
+                        ? $"Registration successful! Your account and farm parcel '{registeredFarm.Name}' have been registered."
+                        : "Registration successful! You can now sign in with your credentials."),
                 requires_approval = requiresApproval,
                 user = new
                 {
@@ -117,8 +145,20 @@ public static class AuthEndpoints
                     role       = newUser.Role,
                     first_name = newUser.FirstName,
                     last_name  = newUser.LastName,
-                    is_active  = newUser.IsActive
-                }
+                    is_active  = newUser.IsActive,
+                    organization = req.Organization,
+                    specialization = req.Specialization,
+                    region_or_county = req.RegionOrCounty,
+                    station_or_office = req.StationOrOffice
+                },
+                farm = registeredFarm != null ? new
+                {
+                    id = registeredFarm.Id,
+                    name = registeredFarm.Name,
+                    owner_id = registeredFarm.OwnerId,
+                    size_ha = registeredFarm.SizeHa,
+                    primary_crop = registeredFarm.PrimaryCrop
+                } : null
             });
         }).WithName("Register").WithTags("Auth").AllowAnonymous();
 
@@ -143,36 +183,6 @@ public static class AuthEndpoints
                 created_at  = user.CreatedAt
             }) : Results.NotFound();
         }).RequireAuthorization().WithName("GetCurrentUser").WithTags("Auth");
-
-        // GET /api/v1/auth/demo-users — Preconfigured personas from the database
-        app.MapGet("/api/v1/auth/demo-users", async (IDbConnectionFactory db) =>
-        {
-            using var conn = db.CreateConnection();
-            var sql = @"
-                SELECT 
-                    id, 
-                    username, 
-                    first_name AS FirstName, 
-                    last_name AS LastName, 
-                    email AS Email, 
-                    role AS Role
-                FROM users 
-                WHERE username IN ('chief', 'admin', 'alexk', 'sarahm', 'gracew', 'danielk', 'davidm', 'johnk', 'alicec', 'peterk')
-                ORDER BY 
-                  CASE role 
-                    WHEN 'farmer' THEN 1 
-                    WHEN 'agronomist' THEN 2 
-                    WHEN 'system_admin' THEN 3 
-                    WHEN 'extension_officer' THEN 4 
-                    WHEN 'weather_analyst' THEN 5 
-                    WHEN 'farm_manager' THEN 6 
-                    WHEN 'field_officer' THEN 7 
-                    WHEN 'super_admin' THEN 8 
-                    ELSE 9 
-                  END;";
-            var users = await conn.QueryAsync(sql);
-            return Results.Ok(users);
-        }).AllowAnonymous().WithName("GetDemoUsers").WithTags("Auth");
 
         return app;
     }

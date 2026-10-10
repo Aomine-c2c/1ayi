@@ -102,10 +102,10 @@ export const farmManagerViews = {
               <span style="font-size: 0.8rem; color: var(--primary-dark); font-weight: 700;">🟢 All Systems Synchronized</span>
             </div>
             <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--text-primary); letter-spacing: -0.5px; margin: 0 0 6px 0;">
-              Estate Command: Welcome, ${user.firstName || 'Manager'}
+              Estate Command: Welcome, ${user.firstName ? `${user.firstName} ${user.lastName}` : (user.username || 'Estate Manager')}
             </h1>
             <p style="color: var(--text-secondary); margin: 0; font-size: 0.92rem; max-width: 720px;">
-              Supervising <strong>${farms.length} commercial farms</strong> covering <strong>${totalArea.toFixed(1)} hectares</strong>. 
+              Supervising <strong>${farms.length} commercial farms</strong> covering <strong>${totalArea.toFixed(1)} hectares</strong> in ${user.regionOrCounty || 'Commercial Farming Belt'}. 
               Active crop cycles are progressing on schedule with projected harvest output of <strong>${totalProductionForecast.toFixed(1)} Metric Tonnes</strong>.
             </p>
           </div>
