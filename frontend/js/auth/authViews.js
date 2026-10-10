@@ -280,14 +280,9 @@ export const authViews = {
     };
 
     const rolesList = [
-      { id: 'farmer', title: 'Smallholder Farmer', icon: '🌾', desc: 'Direct access to smart yield advisories, crop calendar, and register your farm.', requiresApproval: false },
-      { id: 'agronomist', title: 'Agronomist & Specialist', icon: '🔬', desc: 'Crop disease diagnostics, research models, and agrometeorology recommendations.', requiresApproval: false },
-      { id: 'extension_officer', title: 'Extension Officer', icon: '🤝', desc: 'Field inspections, farmer outreach registry, and county advisory dissemination.', requiresApproval: false },
-      { id: 'farm_manager', title: 'Commercial Farm Manager', icon: '🚜', desc: 'Estate parcels, multi-field operations, farm equipment, and labor scheduling.', requiresApproval: false },
-      { id: 'weather_analyst', title: 'Weather Analyst', icon: '⛅', desc: 'Meteorological telemetry stations, sensor QA, and early warning blasts.', requiresApproval: false },
-      { id: 'field_officer', title: 'Field Compliance Officer', icon: '📋', desc: 'GAP certifications, pest scouting records, and soil audits.', requiresApproval: false },
-      { id: 'system_admin', title: 'System Administrator', icon: '🛡️', desc: 'Administrative control, user provisioning, and audit logs. Requires administrator approval.', requiresApproval: true },
-      { id: 'super_admin', title: 'Super Administrator', icon: '👑', desc: 'Executive agricultural governance and system configuration. Requires administrator approval.', requiresApproval: true }
+      { id: 'farmer', title: 'Smallholder / Estate Farmer', icon: '🚜', desc: 'Direct access to your farm dashboard, crop suitability evaluation, daily weather advisories, and yield targets.', requiresApproval: false },
+      { id: 'agronomist', title: 'Agronomist & Field Officer', icon: '🌾', desc: 'Calibrate regional crop calendars, review disease/pest alerts, perform field inspections, and broadcast advisories.', requiresApproval: false },
+      { id: 'system_admin', title: 'System Administrator', icon: '🔐', desc: 'Manage user access, configure regional weather stations, monitor system health, and inspect audit logs.', requiresApproval: true }
     ];
 
     const calculatePasswordStrength = (pass) => {
