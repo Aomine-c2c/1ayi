@@ -163,6 +163,35 @@ export function initRouter() {
         return;
       }
 
+      // Route public exempt paths immediately before role-specific overrides
+      const publicRouteMap = {
+        'register': () => authViews.renderRegisterView(contentArea),
+        'login': () => {
+          const redirectOptions = window.__ayis_login_notice || {};
+          window.__ayis_login_notice = null;
+          return authViews.showLoginModal(() => {
+            updateNavbarAuthUI();
+            window.location.hash = '#dashboard';
+          }, redirectOptions);
+        },
+        'forgot-password': () => authViews.showForgotPasswordModal(),
+        'reset-password': () => authViews.showResetPasswordModal(),
+        'onboarding': () => authViews.showFarmerOnboardingWizard(),
+        'help': () => views.help(contentArea),
+        'about': () => views.about(contentArea),
+        '404': () => views.renderHttpState(contentArea, '404'),
+        '403': () => views.renderHttpState(contentArea, '403'),
+        '500': () => views.renderHttpState(contentArea, '500'),
+        'offline': () => views.renderHttpState(contentArea, 'offline'),
+        'maintenance': () => views.renderHttpState(contentArea, 'maintenance')
+      };
+
+      if (publicRouteMap[cleanHash]) {
+        await publicRouteMap[cleanHash]();
+        updateNavbarAuthUI();
+        return;
+      }
+
       // Check if user is attempting to access a route disallowed for their active role
       const allowedRoutes = ROLE_ALLOWED_ROUTES[currentRole];
       if (allowedRoutes && !allowedRoutes.has(cleanHash) && !publicExempt.includes(cleanHash) && !cleanHash.startsWith('search')) {

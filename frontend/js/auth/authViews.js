@@ -1184,15 +1184,20 @@ export const authViews = {
                   ? `Registration successful! Farm "${farmDetails.name}" registered and linked. Please sign in with your password.`
                   : `Registration successful! Please sign in with your password.`);
 
-            // Redirect user to the sign in form with prefilled username/email (and empty password)
-            authViews.showLoginModal(null, {
+            // Store options so the #login route opens the modal with prefilled data cleanly
+            window.__ayis_login_notice = {
               initialUsername: registeredUsername,
               initialNotice: noticeMsg,
               alertType: requiresApproval ? 'warning' : 'success'
-            });
+            };
 
-            // Also update hash to dashboard or login
-            window.location.hash = '#login';
+            // Transition cleanly to login route
+            if (window.location.hash === '#login') {
+              authViews.showLoginModal(null, window.__ayis_login_notice);
+              window.__ayis_login_notice = null;
+            } else {
+              window.location.hash = '#login';
+            }
           } else {
             render(result.message || 'Registration failed. Please review your details and try again.', 'critical');
           }
