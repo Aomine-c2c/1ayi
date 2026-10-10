@@ -185,8 +185,10 @@ export function initRouter() {
       // Route public exempt paths immediately before role-specific overrides
       const publicRouteMap = {
         'register': async () => {
-          // Render the active dashboard in the background so the user is viewing the system
-          if (roleViews[currentRole]) {
+          // Render the intro/landing page in the background so the user is viewing the system overview
+          if (!isUserLoggedIn) {
+            authViews.renderSignedOutView(contentArea);
+          } else if (roleViews[currentRole]) {
             await roleViews[currentRole](contentArea);
           } else if (views.dashboard) {
             await views.dashboard(contentArea);
@@ -197,8 +199,10 @@ export function initRouter() {
           });
         },
         'login': async () => {
-          // Render the active dashboard in the background so the user is viewing the system
-          if (roleViews[currentRole]) {
+          // Render the intro/landing page in the background so the user is viewing the system overview
+          if (!isUserLoggedIn) {
+            authViews.renderSignedOutView(contentArea);
+          } else if (roleViews[currentRole]) {
             await roleViews[currentRole](contentArea);
           } else if (views.dashboard) {
             await views.dashboard(contentArea);

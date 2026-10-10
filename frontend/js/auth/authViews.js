@@ -2478,8 +2478,10 @@ export const authViews = {
     };
 
     const handleRegister = () => {
-      document.body.classList.remove('public-view');
-      window.location.hash = '#register';
+      authViews.showRegisterModal(() => {
+        document.body.classList.remove('public-view');
+        window.location.hash = '#dashboard';
+      });
     };
 
     container.querySelector('#btnLandingSignInTop')?.addEventListener('click', handleSignIn);
